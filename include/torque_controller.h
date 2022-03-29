@@ -60,5 +60,5 @@ private:
     // count for receiving data 
     size_t count;
     // desired joint configuration
-    std::vector<double> q_goal;
+    std::array<double, 9> q_goal;
 };

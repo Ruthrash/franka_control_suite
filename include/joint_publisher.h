@@ -1,11 +1,13 @@
+#pragma once
+
 #include <zmq.hpp>
-#include <vector>
+#include <array>
 
 class JointPublisher {
 public:
     JointPublisher(std::string port);
     JointPublisher(const JointPublisher& publisher);
-    void writeMessage(std::vector<double> jointAngles);
+    void writeMessage(const std::array<double, 7>& jointAngles);
 
     zmq::context_t ctx_;
     zmq::socket_t socket_;

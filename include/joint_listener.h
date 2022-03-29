@@ -1,5 +1,7 @@
+#pragma once
+
 #include <zmq.hpp>
-#include <vector>
+#include <array>
 
 class JointListener {
 public:
@@ -7,7 +9,7 @@ public:
     JointListener(const JointListener& listener);
     void readMessage();
 
-    std::vector<double> jointAngles;
+    std::array<double, 9> jointAngles = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
     zmq::context_t ctx_;
     zmq::socket_t socket_;
     bool messageChanged_;

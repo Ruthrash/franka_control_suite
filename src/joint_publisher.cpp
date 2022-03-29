@@ -10,7 +10,7 @@ JointPublisher::JointPublisher(const JointPublisher& joint_listener) : socket_(c
     socket_.bind(port_);
 }
 
-void JointPublisher::writeMessage(std::vector<double> jointAngles) {
+void JointPublisher::writeMessage(const std::array<double, 7>& jointAngles) {
     zmq::message_t jointAnglesMessage(jointAngles);
     socket_.send(jointAnglesMessage, zmq::send_flags::dontwait);
 }

@@ -24,16 +24,14 @@ namespace robotContext {
 
 TorqueGenerator::TorqueGenerator(int start) {
     count = start;
-    q_goal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}; 
+    q_goal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4, 0, 0}; 
 }
-
-
 
 franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_state,
                                                    franka::Duration period) {
     // coriolis compensation
 
-    if(count % 40 == 0) {
+    if(count % 10 == 0) {
         torqueComms::jointListener.readMessage();
         q_goal = torqueComms::jointListener.jointAngles;
     }
@@ -91,7 +89,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     torqueComms::jointPublisher.writeMessage(jointBroadcast);
     }
    
-    std::array<double, 7> tau_d_rate_limited =
+    std::array<double, DOF> tau_d_rate_limited =
           franka::limitRate(franka::kMaxTorqueRate, tau_d_calculated, robot_state.tau_J_d);
     return tau_d_rate_limited;
 }

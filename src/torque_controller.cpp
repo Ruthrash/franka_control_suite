@@ -83,7 +83,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     std::cout << "\n" << std::endl;
 
     if((count-1)%4==0){
-    std::vector<double> jointBroadcast = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],  
+    std::array<double, DOF> jointBroadcast = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],  
                                             robot_state.q[4], robot_state.q[5], robot_state.q[6]};
     
     torqueComms::jointPublisher.writeMessage(jointBroadcast);

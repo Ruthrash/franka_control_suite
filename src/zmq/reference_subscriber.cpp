@@ -1,10 +1,7 @@
-#pragma once
-
-#include "joint_listener.h"
+#include "zmq/reference_subscriber.hpp"
 #include <iostream>
-#include <chrono>
 
-JointListener::JointListener(std::string port) : socket_(ctx_, zmq::socket_type::sub) {
+ReferenceSubscriber::ReferenceSubscriber(std::string port) : socket_(ctx_, zmq::socket_type::sub) {
     int confl = 1;
     socket_.setsockopt(ZMQ_CONFLATE, &confl, sizeof(int));
     socket_.connect(port);
@@ -13,7 +10,7 @@ JointListener::JointListener(std::string port) : socket_(ctx_, zmq::socket_type:
     readMessage();
 }
 
-JointListener::JointListener(const JointListener& joint_listener) : socket_(ctx_, zmq::socket_type::sub){
+ReferenceSubscriber::ReferenceSubscriber(const ReferenceSubscriber& joint_listener) : socket_(ctx_, zmq::socket_type::sub){
     int confl = 1;
     socket_.setsockopt(ZMQ_CONFLATE, &confl, sizeof(int));
     socket_.connect(joint_listener.port_);
@@ -22,7 +19,7 @@ JointListener::JointListener(const JointListener& joint_listener) : socket_(ctx_
     readMessage();
 }
 
-void JointListener::readMessage() {
+void ReferenceSubscriber::readMessage() {
     zmq::message_t jointAnglesMessage;
     socket_.recv(&jointAnglesMessage);
  

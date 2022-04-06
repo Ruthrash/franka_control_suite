@@ -15,7 +15,9 @@ link_directories(${Franka_INCLUDE_DIRS})
 
 
 # define source files
-file(GLOB_RECURSE FRANKA_CONTROL_SRC ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
+file(GLOB_RECURSE FRANKA_CONTROL_SRC ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp ${CMAKE_CURRENT_LIST_DIR}/src/controllers/joint_space/joint_position_controller.cpp 
+ ${CMAKE_CURRENT_LIST_DIR}/src/controllers/zmq/*.cpp
+)
 add_executable(franka_control ${FRANKA_CONTROL_SRC})
 
 

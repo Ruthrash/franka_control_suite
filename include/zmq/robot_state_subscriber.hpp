@@ -3,10 +3,10 @@
 #include <zmq.hpp>
 #include <array>
 
-class JointListener {
+class RobotStateSubscriber {
 public:
-    JointListener(std::string port);
-    JointListener(const JointListener& listener);
+    RobotStateSubscriber(std::string port);
+    RobotStateSubscriber(const RobotStateSubscriber& listener);
     void readMessage();
 
     std::array<double, 9> jointAngles = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};

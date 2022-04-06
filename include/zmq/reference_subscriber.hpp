@@ -3,10 +3,10 @@
 #include <zmq.hpp>
 #include <array>
 
-class JointListener {
+class ReferenceSubscriber {
 public:
-    JointListener(std::string port);
-    JointListener(const JointListener& listener);
+    ReferenceSubscriber(std::string port);
+    ReferenceSubscriber(const ReferenceSubscriber& listener);
     void readMessage();
 
     std::array<double, 9> jointAngles = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};

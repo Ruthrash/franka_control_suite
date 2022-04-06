@@ -31,6 +31,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
                                                    franka::Duration period) {
     // coriolis compensation
 
+    //reads reference signal every 10ms 
     if(count % 10 == 0) {
         torqueComms::jointListener.readMessage();
         q_goal = torqueComms::jointListener.jointAngles;

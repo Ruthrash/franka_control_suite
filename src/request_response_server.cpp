@@ -2,7 +2,7 @@
 #include <franka/robot.h>
 #include <franka/robot_state.h>
 #include <iostream>
-
+#include "sim_layer.hpp"
 
 
 ReqRepServer::ReqRepServer(){}

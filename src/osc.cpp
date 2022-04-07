@@ -44,12 +44,17 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     auto jacobianArray = oscRobotContex::model.zeroJacobian(
         franka::Frame::kEndEffector, robotState
     );
-    // ee velocity
-    auto eeVelocityArray = robotState.O_dP_EE_d;
+    // joint velocity
+    auto jointVelocityArray = robotState.dq;
 
     // convert to Eigen
     Eigen::Map<const Eigen::Matrix<double, 7, 7>> mass(massArray.data());
     Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobianArray.data());
+    Eigen::Map<const Eigen::Matrix<double, 7, 1>> jointVelocity(jointVelocityArray.data());
+    
+    // ee velocity
+    Eigen::Array<double, 6, 1> eeVelocityArray = (jacobian * jointVelocity).array();
+    // auto eeVelocityArray = robotState.O_dP_EE_d;
 
     // task space gains
     Eigen::Array<double, 6, 1> taskWrenchMotion;

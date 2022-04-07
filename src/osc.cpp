@@ -5,7 +5,7 @@
 #include <franka/rate_limiting.h>
 
 namespace oscComms {
-    Listener listener("tcp://192.168.1.2:2069");
+    Listener listener(CommsDataType::DELTA_POSE, "tcp://192.168.1.2:2069");
     Publisher publisher("tcp://192.168.1.3:2096");
 }
 
@@ -21,11 +21,20 @@ Osc::Osc(int start) {
 
 franka::Torques Osc::operator()(const franka::RobotState& robotState,
                                 franka::Duration period) {
-
+    // read command
     if(count % 10 == 0) {
         oscComms::listener.readMessage();
         for(size_t i = 0; i < 6; i++)
             deltaPose[i] = oscComms::listener.values[i];
+    }
+    // write state
+    if((count - 1) % 4 == 0) {
+        std::vector<double> jointBroadcast = {
+            robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
+            robotState.q[4], robotState.q[5], robotState.q[6]
+        };
+    
+        oscComms::publisher.writeMessage(jointBroadcast);
     }
     count++;
 
@@ -52,7 +61,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         jacobian * mass.inverse() * jacobian.transpose()
     ).inverse();
 
-    // compputed torque
+    // computed torque
     taskWrenchMotion = armMassMatrixTask * taskWrenchMotion.matrix();
     Eigen::VectorXd tau_d(7) = jacobian.transpose() * taskWrenchMotion.matrix();
 

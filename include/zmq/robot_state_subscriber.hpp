@@ -2,6 +2,7 @@
 
 #include <zmq.hpp>
 #include <array>
+#include <franka/robot.h>
 
 class RobotStateSubscriber {
 public:
@@ -14,4 +15,8 @@ public:
     zmq::socket_t socket_;
     bool messageChanged_;
     std::string port_;
+public:
+    franka::RobotState state_;
+    int count;
+
 };

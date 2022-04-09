@@ -20,12 +20,15 @@ ReferenceSubscriber::ReferenceSubscriber(const ReferenceSubscriber& joint_listen
 }
 
 void ReferenceSubscriber::readMessage() {
+    std::cout<<"waiting for message reference joint angles\n";
     zmq::message_t jointAnglesMessage;
     socket_.recv(&jointAnglesMessage);
  
     int numValues = jointAnglesMessage.size() / sizeof(double);
     assert(numValues == 9);
 
-    for(int i = 0; i < numValues; i++) 
+    for(int i = 0; i < numValues; i++){
         jointAngles[i] = *(reinterpret_cast<double*>(jointAnglesMessage.data()) + i);
+        std::cout<<jointAngles[i]<<" ";
+    }std::cout<<"reference\n";
 }

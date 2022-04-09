@@ -40,15 +40,15 @@ namespace zqmComms {
     ReqRepServer reqrepServer("tcp://127.0.0.1:2000");
 }
 
-int main(int argc, char** argv)
-{
-    std::cout<<"Trying to connect\n";
-    franka::Robot robot("192.168.0.1");
-    while (true)
-    {
-        franka::RobotState current_state = robot.readOnce();
-        zqmComms::reqrepServer.SetCurrrentEEPose(current_state.O_T_EE);
+// int main(int argc, char** argv)
+// {
+//     std::cout<<"Trying to connect\n";
+//     franka::Robot robot("192.168.0.1");
+//     while (true)
+//     {
+//         franka::RobotState current_state = robot.readOnce();
+//         zqmComms::reqrepServer.SetCurrrentEEPose(current_state.O_T_EE);
           
-    }
-    return 0;
-}
+//     }
+//     return 0;
+// }

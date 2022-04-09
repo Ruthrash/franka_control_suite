@@ -1,28 +1,47 @@
 #include "sim_layer.hpp"
-
+#include <chrono>
+#include <iostream>
 
 SimLayer::SimLayer(){}
 
 SimLayer::~SimLayer(){}
 
 namespace zmqComms{
-    TorqueCommandPublisher torqueCommandPublisher("tcp://192.168.1.2:2069");
-    DynamicsModelSubscriber dynamicsModelSubscriber("tcp://192.168.1.2:2069");
-    RobotStateSubscriber robotStateSubscriber("tcp://192.168.1.2:2069");
+    // TorqueCommandPublisher torqueCommandPublisher("tcp://127.0.0.1:5069");
+    RobotStateSubscriber robotStateSubscriber("tcp://127.0.0.1:4069");
 }
 
-void SimLayer::control (std::function<franka::Torques(const franka::RobotState&, franka::Duration)> control_callback,
-                        bool limit_rate,
-                        double cutoff_frequency){
+void SimLayer::control (std::function<franka::Torques(const franka::RobotState&, franka::Duration)> control_callback){
+    while(1){
+    auto t_start = std::chrono::high_resolution_clock::now();
+    zmqComms::robotStateSubscriber.readMessage();
+    franka::Duration dur; 
+    auto res = control_callback(zmqComms::robotStateSubscriber.state_, dur);
+    auto t_end = std::chrono::high_resolution_clock::now();
+    double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end-t_start).count();
+    std::cout<<elapsed_time_ms<< " run time\n";
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+    }
+                            
+                            /*state_.dq[i], state_.q[i], state_.tau_J_d*/
+}
+
+
+void SimLayer::loop()
+{
+    zmqComms::robotStateSubscriber.readMessage();
+}
 
     //someone will set this
-    while(!command.motion_finished){
-        //call control callback at 1Khz, get torques and publish it to Orbit
-        command = control_callback(current_state, current_time_step);
-        //publish torque to orbit
-        send();
-    }
-}
+    // while(!command.motion_finished){
+    //     //call control callback at 1Khz, get torques and publish it to Orbit
+    //     command = control_callback(current_state, current_time_step);
+    //     //publish torque to orbit
+    //     send();
+    // }
+
 
 
 

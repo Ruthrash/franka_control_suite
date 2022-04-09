@@ -3,12 +3,12 @@
 #include <functional>
 #include <franka/robot.h>
 #include "zmq/torque_command_publisher.hpp"
-#include "zmq/dyn_model_subscriber.hpp"
 #include "zmq/robot_state_subscriber.hpp"
 
+#include <chrono>
+#include <thread>
 namespace zmqComms{
-    extern TorqueCommandPublisher torqueCommandPublisher;
-    extern DynamicsModelSubscriber dynamicsModelSubscriber;
+    // extern TorqueCommandPublisher torqueCommandPublisher;
     extern RobotStateSubscriber robotStateSubscriber;
 }
 
@@ -16,15 +16,15 @@ class SimLayer {
 
 public:
     SimLayer();
-    ~SimLayer(); 
-
+    ~SimLayer();
+    void loop(); 
+    void control(std::function<franka::Torques(const franka::RobotState&, franka::Duration)> control_callback);
 protected:
 
 private: 
-    franka::Torques command; 
-    void control(std::function<franka::Torques(const franka::RobotState&, franka::Duration)> control_callback,
-                bool limit_rate,
-                double cutoff_frequency);
+
+    franka::Torques command{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+
 
     // bool SimLayer::spinControl(const RobotState& robot_state,
     //                             franka::Duration time_step,

@@ -2,6 +2,9 @@
 
 
 #include <franka/robot.h>
+#include <franka/model.h>
+#include <franka/robot_state.h>
+#include "zmq/torque_command_publisher.hpp"
 #define DOF  7
 
 
@@ -39,4 +42,4 @@ protected:
 
 
 
-ControllersBase::~ControllersBase(){}
+inline ControllersBase::~ControllersBase(){}

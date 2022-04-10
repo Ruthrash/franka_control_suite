@@ -12,6 +12,10 @@
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
 
+/*
+Constructor must have atleast one parameter. Because when robot.cotrol()is run, 
+it tries to pass the () operator with this class names, which will conflict with the base constructor
+*/
 JointPositionController::JointPositionController(int start){count =start;}
 
 JointPositionController::~JointPositionController(){}
@@ -71,7 +75,7 @@ franka::Torques JointPositionController::operator() (const franka::RobotState& r
 
         // tau_d_calculated[i] = k_s[i] * q_error - k_d[i] * robot_state.dq[i];
 
-        tau_d_calculated[i] = 20* (
+        tau_d_calculated[i] = 2* (
             1.9 * k_s[i] * (q_error) 
             - k_d[i] * robot_state.dq[i]); 
         // const std::array<double, DOF> k_s = {{700.0, 700.0, 700.0, 900.0, 450.0, 450.0, 300.0}};

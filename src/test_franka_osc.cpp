@@ -6,9 +6,9 @@
 
 int main(int argc, char** argv) {
     try {
-        Osc osc(2);
+        Osc osc(1);
         while(true) {
-            robotContext::robot.control(osc);
+            robotContext::robot.control(osc, true);
         }
 
     } catch (const franka::Exception& e) {

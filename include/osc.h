@@ -29,21 +29,21 @@ namespace oscRobotContext {
 
 class Osc {
 public:
-    Osc(int start);
+    Osc(int start, bool sendJoints);
     
     franka::Torques operator()(const franka::RobotState& robotState, franka::Duration period);
 
 private:
     // stiffness
-    const std::array<double, 6> k_s = {{700.0, 700.0, 700.0, 700.0, 291.67, 175.0}};
+    const std::array<double, 6> k_s = {{40, 40, 40, 40, 40, 40}};
     // damping gain
-    const std::array<double, 6> k_d = {{100.0, 100.0, 100.0, 100.0, 60.0, 50.0}};
+    const std::array<double, 6> k_d = {{8, 8, 8, 8, 8, 8}};
     // torque limits
     const std::array<double, 7> torque_max = {{87, 87, 87, 87, 12, 12, 12}};
     // count for receiving data
     size_t count;
     // pose delta
     std::array<double, 6> deltaPose;
-
-    
+    // whether joints angles or ee pose should be sent
+    bool jointMessage;
 };

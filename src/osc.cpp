@@ -14,8 +14,9 @@ namespace oscRobotContext {
     franka::Model model = robot.loadModel();
 }
 
-Osc::Osc(int start) {
+Osc::Osc(int start, bool sendJoints) {
     count = start;
+    jointMessage = sendJoints;
     deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
 
@@ -29,12 +30,25 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     }
     // write state
     if((count - 1) % 4 == 0) {
-        std::vector<double> jointBroadcast = {
-            robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
-            robotState.q[4], robotState.q[5], robotState.q[6]
-        };
-    
-        oscComms::publisher.writeMessage(jointBroadcast);
+        if(sendJoints) {
+            std::vector<double> jointBroadcast = {
+                robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
+                robotState.q[4], robotState.q[5], robotState.q[6]
+            };
+        
+            oscComms::publisher.writeMessage(jointBroadcast);
+        }
+        else {
+            Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+            Eigen::Vector3d position(transform.translation());      
+            Eigen::Quaterniond orientation(transform.linear());
+            std::vector<double> poseBroadcast(7);
+            Eigen::Map<const Eigen::Vector3d>(poseBroadcast.data(), position.rows(), position.cols()) = position;
+            poseBroadcast[4] = orientation.x();
+            poseBroadcast[5] = orientation.y();
+            poseBroadcast[6] = orientation.z();
+            poseBroadcast[7] = orientation.w();
+        }
     }
     count++;
 
@@ -67,7 +81,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     ).inverse();
 
     // computed torque
-    taskWrenchMotion = armMassMatrixTask * taskWrenchMotion.matrix();
+    taskWrenchMotion = (armMassMatrixTask * taskWrenchMotion.matrix()).array();
     Eigen::VectorXd tau_d(7) = jacobian.transpose() * taskWrenchMotion.matrix();
 
     // convert back to std::array

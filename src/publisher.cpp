@@ -1,4 +1,4 @@
-#include <publisher,h>
+#include <publisher.h>
 
 Publisher::Publisher(std::string port) : socket(ctx, zmq::socket_type::pub) {
     socket.bind(port);

@@ -3,6 +3,8 @@
 #include <franka/exception.h>
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
+#include <eigen3/Eigen/Dense>
+
 
 namespace oscComms {
     Listener listener(CommsDataType::DELTA_POSE, "tcp://192.168.1.2:2069");
@@ -30,7 +32,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     }
     // write state
     if((count - 1) % 4 == 0) {
-        if(sendJoints) {
+        if(jointMessage) {
             std::vector<double> jointBroadcast = {
                 robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
                 robotState.q[4], robotState.q[5], robotState.q[6]
@@ -39,15 +41,19 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             oscComms::publisher.writeMessage(jointBroadcast);
         }
         else {
-            Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+            Eigen::Affine3d transform(Eigen::Matrix4d::Map(robotState.O_T_EE.data()));
             Eigen::Vector3d position(transform.translation());      
             Eigen::Quaterniond orientation(transform.linear());
             std::vector<double> poseBroadcast(7);
-            Eigen::Map<const Eigen::Vector3d>(poseBroadcast.data(), position.rows(), position.cols()) = position;
-            poseBroadcast[4] = orientation.x();
-            poseBroadcast[5] = orientation.y();
-            poseBroadcast[6] = orientation.z();
-            poseBroadcast[7] = orientation.w();
+            // Eigen::Map<const Eigen::Vector3d>(poseBroadcast.data(), position.rows(), position.cols()) = position;
+            poseBroadcast[0] = position(0);
+            poseBroadcast[1] = position(1);
+            poseBroadcast[2] = position(2);
+            poseBroadcast[3] = orientation.x();
+            poseBroadcast[4] = orientation.y();
+            poseBroadcast[5] = orientation.z();
+            poseBroadcast[6] = orientation.w();
+            oscComms::publisher.writeMessage(poseBroadcast);
         }
     }
     count++;
@@ -55,7 +61,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     // joint space mass matrix
     auto massArray = oscRobotContext::model.mass(robotState);
     // geometrix jacobian
-    auto jacobianArray = oscRobotContex::model.zeroJacobian(
+    auto jacobianArray = oscRobotContext::model.zeroJacobian(
         franka::Frame::kEndEffector, robotState
     );
     // joint velocity
@@ -73,7 +79,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     // task space gains
     Eigen::Array<double, 6, 1> taskWrenchMotion;
     for(size_t i = 0; i < 6; i++)
-        taskWrenchMotion[i] = k_s[i] * deltaPose[i] - k_d * eeVelocityArray[i];
+        taskWrenchMotion[i] = k_s[i] * deltaPose[i] - k_d[i] * eeVelocityArray[i];
 
     // task space mass 
     Eigen::Matrix<double, 6, 6> armMassMatrixTask = (
@@ -82,7 +88,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
 
     // computed torque
     taskWrenchMotion = (armMassMatrixTask * taskWrenchMotion.matrix()).array();
-    Eigen::VectorXd tau_d(7) = jacobian.transpose() * taskWrenchMotion.matrix();
+    Eigen::VectorXd tau_d = jacobian.transpose() * taskWrenchMotion.matrix();
 
     // convert back to std::array
     std::array<double, 7> tau_d_array{};

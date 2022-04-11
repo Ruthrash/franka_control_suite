@@ -32,5 +32,5 @@ void Listener::readMessage() {
     assert(numValues == typeLengths[type]);
 
     for(int i = 0; i < numValues; i++) 
-        message[i] = *(reinterpret_cast<double*>(message.data()) + i);
+        values[i] = *(reinterpret_cast<double*>(message.data()) + i);
 }

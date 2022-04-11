@@ -9,16 +9,16 @@ enum class CommsDataType {
     DELTA_POSE
 };
 
-const std::map<CommsDataType, int> typeLengths = {
+inline std::map<CommsDataType, int> typeLengths = {
     {CommsDataType::JOINT_ANGLES, 7},
     {CommsDataType::DELTA_POSE, 6}
-}
+};
 
 class Listener {
 public:
-    const CommsDataType type;
+    CommsDataType type;
 
-    Listener(CommdsDataType type, std::string port);
+    Listener(CommsDataType type, std::string port);
     Listener(const Listener& listener);
     void readMessage();
 

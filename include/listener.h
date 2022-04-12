@@ -18,7 +18,7 @@ class Listener {
 public:
     CommsDataType type;
 
-    Listener(CommsDataType type, std::string port);
+    Listener(CommsDataType dataType, std::string portId);
     Listener(const Listener& listener);
     void readMessage();
 

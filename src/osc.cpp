@@ -4,6 +4,7 @@
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
 #include <eigen3/Eigen/Dense>
+#include <iostream>
 
 
 namespace oscComms {

@@ -6,12 +6,20 @@
 
 enum class CommsDataType {
     JOINT_ANGLES,
-    DELTA_POSE
+    DELTA_POSE,
+    POSE,
+    JOINT_ANGLES_GRIPPER,
+    DELTA_POSE_GRIPPER,
+    POSE_GRIPPER
 };
 
 inline std::map<CommsDataType, int> typeLengths = {
     {CommsDataType::JOINT_ANGLES, 7},
-    {CommsDataType::DELTA_POSE, 6}
+    {CommsDataType::DELTA_POSE, 6},
+    {CommsDataType::POSE, 6},
+    {CommsDataType::JOINT_ANGLES_GRIPPER, 7 + 2},
+    {CommsDataType::DELTA_POSE_GRIPPER, 6 + 2},
+    {CommsDataType::POSE_GRIPPER, 6 + 2},
 };
 
 class Listener {

@@ -5,6 +5,7 @@
 #include <franka/rate_limiting.h>
 #include <eigen3/Eigen/Dense>
 #include <iostream>
+#include <math.h>
 
 
 namespace oscComms {
@@ -14,6 +15,7 @@ namespace oscComms {
 
 namespace oscRobotContext {
     franka::Robot robot("192.168.0.1");
+    franka::Gripper gripper("192.168.0.1");
     franka::Model model = robot.loadModel();
 }
 
@@ -21,6 +23,7 @@ Osc::Osc(int start, bool sendJoints) {
     count = start;
     jointMessage = sendJoints;
     deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    gripperCommand = {-1.0, -1.0};
 }
 
 franka::Torques Osc::operator()(const franka::RobotState& robotState,
@@ -30,6 +33,20 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         oscComms::listener.readMessage();
         for(size_t i = 0; i < 6; i++)
             deltaPose[i] = oscComms::listener.values[i];
+        // check for gripper command
+        if(
+            oscComms::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
+            oscComms::listener.type == CommsDataType::POSE_GRIPPER) {
+                if(
+                    fabs(oscComms::listener.values[6+0] - gripperCommand[0]) > 0.01 || 
+                    fabs(oscComms::listener.values[6+1] - gripperCommand[1]) > 0.01 
+                ) {
+                    for(size_t i = 0; i < 2; i++)
+                        gripperCommand[i] = oscComms::listener.values[6+i];
+                    // stop the current gripper movement
+                    oscRobotContext::gripper.stop();
+                }
+            }
     }
     // write state
     if((count - 1) % 4 == 0) {
@@ -94,6 +111,11 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     // convert back to std::array
     std::array<double, 7> tau_d_array{};
     Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
+
+    // gripper command
+    if(gripperCommand[0] != -1) {
+        oscRobotContext::gripper.move(gripperCommand[0], gripperCommand[1]);
+    }
     
     return tau_d_array;
 }

@@ -24,6 +24,7 @@ namespace oscComms {
 
 namespace oscRobotContext {
     extern franka::Robot robot;
+    extern franka::Gripper grippper;
     extern franka::Model model;
 }
 
@@ -39,11 +40,13 @@ private:
     // damping gain
     const std::array<double, 6> k_d = {{8, 8, 8, 8, 8, 8}};
     // torque limits
-    const std::array<double, 7> torque_max = {{87, 87, 87, 87, 12, 12, 12}};
+    const std::array<double, 7> torqueMax = {{87, 87, 87, 87, 12, 12, 12}};
     // count for receiving data
     size_t count;
     // pose delta
     std::array<double, 6> deltaPose;
     // whether joints angles or ee pose should be sent
     bool jointMessage;
+    // gripper command
+    std::array<double, 2> gripperCommand;
 };

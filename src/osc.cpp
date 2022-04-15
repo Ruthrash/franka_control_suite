@@ -97,6 +97,11 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobianArray.data());
     Eigen::Matrix<double, 7, 6> jacobianT = jacobian.transpose();
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> jointVelocity(jointVelocityArray.data());
+
+    // add extra mass to the mass matrix
+    // mass(4, 4) += 0.10;
+    // mass(5, 5) += 0.10;
+    // mass(6, 6) += 0.10;
     
     // ee velocity
     Eigen::Array<double, 6, 1> eeVelocityArray = (jacobian * jointVelocity).array();

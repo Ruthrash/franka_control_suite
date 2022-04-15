@@ -19,7 +19,7 @@ namespace oscRobotContext {
     franka::Model model = robot.loadModel();
 }
 
-Osc::Osc(int start, bool sendJoints, bool nullspace = false) {
+Osc::Osc(int start, bool sendJoints, bool nullspace) {
     count = start;
     jointMessage = sendJoints;
     deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};

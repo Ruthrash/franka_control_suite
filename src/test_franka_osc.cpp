@@ -7,12 +7,11 @@
 
 int main(int argc, char** argv) {
     try {
-        td::cout << "moving robot to default position..." << std::endl;
+        std::cout << "moving robot to default position..." << std::endl;
         std::array<double, 7> qRest = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
         MotionGenerator motionGenerator(0.5, qRest);
-        robotContext::robot.control(motionGenerator);
+        oscRobotContext::robot.control(motionGenerator);
         std::cout << "finished moving robot to default position" << std::endl;
-
         Osc osc(1, true);
         while(true) {
             oscRobotContext::robot.control(osc);

@@ -13,7 +13,6 @@
 //         robotContext::robot.control(motionGenerator);
 //         std::cout << "finished moving robot to default position" << std::endl;
 
-
 //         TorqueGenerator torqueController(1);
 //         while(true) {
 //             std::cout << "inside loop" << std::endl;

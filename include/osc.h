@@ -9,6 +9,7 @@
 #include <franka/control_types.h>
 #include <franka/duration.h>
 #include <franka/robot.h>
+#include <franka/gripper.h>
 #include <franka/model.h>
 #include <franka/robot_state.h>
 
@@ -24,7 +25,7 @@ namespace oscComms {
 
 namespace oscRobotContext {
     extern franka::Robot robot;
-    extern franka::Gripper grippper;
+    extern franka::Gripper gripper;
     extern franka::Model model;
 }
 
@@ -53,14 +54,14 @@ private:
     bool useNullspace;
     // null space controller rest pose
     // const std::array<double, 7> restPose = {{0.0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
-    const Eigen::Array<double, 7, 1> restPose;
+    Eigen::Array<double, 7, 1> restPose;
     // nullspace damping gain
     // const std::array<double, 7> nullGain = {{1, 1, 1, 1, 1, 1, 1}};
-    const Eigen::Array<double, 7, 1> nullGain;
+    Eigen::Array<double, 7, 1> nullGain;
     // nullspace gradient constant
     double alpha = 10.;
     // nullspace gradient weight
-    const Eigen::Array<double, 7, 1> nullWeight;
+    Eigen::Array<double, 7, 1> nullWeight;
     // whether to do coriolis compensation
     bool coriolisCompensation;
     // previous timestep jacobian

@@ -30,7 +30,7 @@ namespace oscRobotContext {
 
 class Osc {
 public:
-    Osc(int start, bool sendJoints);
+    Osc(int start, bool sendJoints, bool nullspace = false);
     
     franka::Torques operator()(const franka::RobotState& robotState, franka::Duration period);
 
@@ -48,5 +48,17 @@ private:
     // whether joints angles or ee pose should be sent
     bool jointMessage;
     // gripper command
-    std::array<double, 2> gripperCommand;
+    double gripperCommand;
+    // whether to do nullspace compensation
+    bool useNullspace;
+    // null space controller rest pose
+    // const std::array<double, 7> restPose = {{0.0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+    const Eigen::Array<double, 7, 1> restPose;
+    // nullspace damping gain
+    // const std::array<double, 7> nullGain = {{1, 1, 1, 1, 1, 1, 1}};
+    const Eigen::Array<double, 7, 1> nullGain;
+    // nullspace gradient constant
+    double alpha = 10.;
+    // nullspace gradient weight
+    const Eigen::Array<double, 7, 1> nullWeight;
 };

@@ -17,9 +17,9 @@ inline std::map<CommsDataType, int> typeLengths = {
     {CommsDataType::JOINT_ANGLES, 7},
     {CommsDataType::DELTA_POSE, 6},
     {CommsDataType::POSE, 6},
-    {CommsDataType::JOINT_ANGLES_GRIPPER, 7 + 2},
-    {CommsDataType::DELTA_POSE_GRIPPER, 6 + 2},
-    {CommsDataType::POSE_GRIPPER, 6 + 2},
+    {CommsDataType::JOINT_ANGLES_GRIPPER, 7 + 1},
+    {CommsDataType::DELTA_POSE_GRIPPER, 6 + 1},
+    {CommsDataType::POSE_GRIPPER, 6 + 1},
 };
 
 class Listener {

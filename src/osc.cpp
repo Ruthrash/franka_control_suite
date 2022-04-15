@@ -19,11 +19,15 @@ namespace oscRobotContext {
     franka::Model model = robot.loadModel();
 }
 
-Osc::Osc(int start, bool sendJoints) {
+Osc::Osc(int start, bool sendJoints, bool nullspace = false) {
     count = start;
     jointMessage = sendJoints;
     deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    gripperCommand = {-1.0, -1.0};
+    gripperCommand = -100.0;
+    useNullspace = nullspace;
+    restPose << 0.0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4;
+    nullGain << 1, 1, 1, 1, 1, 1, 1;
+    nullWeight << 1, 1, 1, 1, 1, 1, 1;
 }
 
 franka::Torques Osc::operator()(const franka::RobotState& robotState,
@@ -38,11 +42,9 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             oscComms::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
             oscComms::listener.type == CommsDataType::POSE_GRIPPER) {
                 if(
-                    fabs(oscComms::listener.values[6+0] - gripperCommand[0]) > 0.01 || 
-                    fabs(oscComms::listener.values[6+1] - gripperCommand[1]) > 0.01 
+                    fabs(oscComms::listener.values[6] - gripperCommand) > 0.01 
                 ) {
-                    for(size_t i = 0; i < 2; i++)
-                        gripperCommand[i] = oscComms::listener.values[6+i];
+                    gripperCommand = oscComms::listener.values[6];
                     // stop the current gripper movement
                     oscRobotContext::gripper.stop();
                 }
@@ -62,7 +64,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             Eigen::Affine3d transform(Eigen::Matrix4d::Map(robotState.O_T_EE.data()));
             Eigen::Vector3d position(transform.translation());      
             Eigen::Quaterniond orientation(transform.linear());
-            std::vector<double> poseBroadcast(7);
+            std::vector<double> poseBroadcast(9);
             // Eigen::Map<const Eigen::Vector3d>(poseBroadcast.data(), position.rows(), position.cols()) = position;
             poseBroadcast[0] = position(0);
             poseBroadcast[1] = position(1);
@@ -71,6 +73,10 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             poseBroadcast[4] = orientation.y();
             poseBroadcast[5] = orientation.z();
             poseBroadcast[6] = orientation.w();
+            ranka::GripperState gripperState = oscRobotContext::gripper.readOnce();
+            double gripperWidth = gripperState.width;
+            poseBroadcast[7] = width / 2;
+            poseBroadcast[8] = width / 2;
             oscComms::publisher.writeMessage(poseBroadcast);
         }
     }
@@ -87,7 +93,9 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
 
     // convert to Eigen
     Eigen::Map<const Eigen::Matrix<double, 7, 7>> mass(massArray.data());
+    Eigen::Matrix<double, 7, 7> massInv = mass.inverse();
     Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobianArray.data());
+    Eigen::Matrix<double, 7, 6> jacobianT = jacobian.transpose();
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> jointVelocity(jointVelocityArray.data());
     
     // ee velocity
@@ -101,21 +109,43 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
 
     // task space mass 
     Eigen::Matrix<double, 6, 6> armMassMatrixTask = (
-        jacobian * mass.inverse() * jacobian.transpose()
+        jacobian * mass.inverse() * jacobianT
     ).inverse();
 
     // computed torque
     taskWrenchMotion = (armMassMatrixTask * taskWrenchMotion.matrix()).array();
-    Eigen::VectorXd tau_d = jacobian.transpose() * taskWrenchMotion.matrix();
+    Eigen::VectorXd tau_d = jacobianT * taskWrenchMotion.matrix();
+
+    // nullspace control
+    if(useNullspace) {
+        // inertia weighted pseudoinverse
+        EigenMatrix<double, 7, 6> inertiaWeightedPInv = (
+            massInv * jacobianT * armMassMatrixTask
+        );
+        // nullspace projector
+        Eigen::Matrix<double, 7, 7> projector = (
+            Eigen::MatrixXd::Identity(7, 7) - jacobianT * inertiaWeightedPInv.transpose()
+        );
+        // robot state
+        Eigen::Map<const Eigen::Array<double, 7, 1>> jointPos(robotState.q);
+        Eigen::Map<const Eigen::Array<double, 7, 1>> jointVel(robotState.dq);
+        // nullspace torque action
+        Eigen::Array<double, 7, 1> tauNull = (
+            -1 * nullGain * jointVel - alpha * nullWeight * (jointPos - jointVel);
+        );
+        // apply nullspace action
+        taskWrenchMotion += (
+            projector * tauNull.matrix()
+        ).array();
+    }
 
     // convert back to std::array
     std::array<double, 7> tau_d_array{};
     Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
 
     // gripper command
-    if(gripperCommand[0] != -1) {
-        oscRobotContext::gripper.move(gripperCommand[0], gripperCommand[1]);
-    }
+    if(gripperCommand[0] != -100)
+        oscRobotContext::gripper.move(gripperCommand, 0.1);
     
     return tau_d_array;
 }

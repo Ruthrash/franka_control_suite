@@ -30,7 +30,7 @@ namespace oscRobotContext {
 
 class Osc {
 public:
-    Osc(int start, bool sendJoints, bool nullspace = false);
+    Osc(int start, bool sendJoints, bool nullspace = false, bool coriolis = false);
     
     franka::Torques operator()(const franka::RobotState& robotState, franka::Duration period);
 
@@ -61,4 +61,8 @@ private:
     double alpha = 10.;
     // nullspace gradient weight
     const Eigen::Array<double, 7, 1> nullWeight;
+    // whether to do coriolis compensation
+    bool coriolisCompensation;
+    // previous timestep jacobian
+    Eigen::Matrix<double, 6, 7> prevJacobian;
 };

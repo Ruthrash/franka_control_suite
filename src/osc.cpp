@@ -19,15 +19,22 @@ namespace oscRobotContext {
     franka::Model model = robot.loadModel();
 }
 
-Osc::Osc(int start, bool sendJoints, bool nullspace) {
+Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
     count = start;
     jointMessage = sendJoints;
     deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     gripperCommand = -100.0;
+
     useNullspace = nullspace;
     restPose << 0.0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4;
     nullGain << 1, 1, 1, 1, 1, 1, 1;
     nullWeight << 1, 1, 1, 1, 1, 1, 1;
+
+    coriolisCompensation = coriolis;
+    auto robotState = oscRobotContext::robot.readOnce();
+    prevJacobian = Eigen::Map<Eigen::Matrix<double, 6, 7>> = oscRobotContext::model.zeroJacobian(
+        franka::Frame::kEndEffector, robotState
+    );
 }
 
 franka::Torques Osc::operator()(const franka::RobotState& robotState,
@@ -91,6 +98,10 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     // joint velocity
     auto jointVelocityArray = robotState.dq;
 
+    // robot state
+    Eigen::Map<const Eigen::Array<double, 7, 1>> jointPos(robotState.q);
+    Eigen::Map<const Eigen::Array<double, 7, 1>> jointVel(jointVelocityArray);
+    
     // convert to Eigen
     Eigen::Map<const Eigen::Matrix<double, 7, 7>> mass(massArray.data());
     Eigen::Matrix<double, 7, 7> massInv = mass.inverse();
@@ -131,9 +142,6 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         Eigen::Matrix<double, 7, 7> projector = (
             Eigen::MatrixXd::Identity(7, 7) - jacobianT * inertiaWeightedPInv.transpose()
         );
-        // robot state
-        Eigen::Map<const Eigen::Array<double, 7, 1>> jointPos(robotState.q);
-        Eigen::Map<const Eigen::Array<double, 7, 1>> jointVel(robotState.dq);
         // nullspace torque action
         Eigen::Array<double, 7, 1> tauNull = (
             -1 * nullGain * jointVel - alpha * nullWeight * (jointPos - jointVel);
@@ -142,6 +150,22 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         taskWrenchMotion += (
             projector * tauNull.matrix()
         ).array();
+    }
+
+    // coriolis compensation
+    if(coriolisCompensation) {
+        // calculate jacobian using finite difference
+        Eigen::Matrix<double, 6, 7> jacobianDerivative = (jacobian - prevJacobian) / 0.001; 
+        prevJacobian = jacobian;
+
+        // joint space coriolis
+        Eigen::Map<const Eigen::Array<double, 7, 1>> coriolis(
+            oscRobotContext::model.coriolis(robotState)
+        );
+
+        taskWrenchMotion += (
+            coriolis - (jacobianT * armMassMatrixTask * jacobianDerivative * jointVel.matrix()).array()
+        );
     }
 
     // convert back to std::array

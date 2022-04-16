@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
         MotionGenerator motionGenerator(0.5, qRest);
         oscRobotContext::robot.control(motionGenerator);
         std::cout << "finished moving robot to default position" << std::endl;
-        Osc osc(1, true);
+        Osc osc(1, true, false, false);
         while(true) {
             oscRobotContext::robot.control(osc);
         }

@@ -31,15 +31,15 @@ namespace oscRobotContext {
 
 class Osc {
 public:
-    Osc(int start, bool sendJoints, bool nullspace = false, bool coriolis = false);
+    Osc(int start, bool sendJoints, bool nullspace = true, bool coriolis = false);
     
     franka::Torques operator()(const franka::RobotState& robotState, franka::Duration period);
 
 private:
     // stiffness
-    const std::array<double, 6> k_s = {{40, 40, 40, 40, 40, 40}};
+    const std::array<double, 6> k_s = {{60 / 2.5, 60 / 2.5, 60 / 2.5, 180 / 3, 180 / 3, 180 / 3}};
     // damping gain
-    const std::array<double, 6> k_d = {{8, 8, 8, 8, 8, 8}};
+    const std::array<double, 6> k_d = {{8 / 1, 8 / 1, 8 / 1, 8 / 1, 8 / 1, 8 / 1}};
     // torque limits
     const std::array<double, 7> torqueMax = {{87, 87, 87, 87, 12, 12, 12}};
     // count for receiving data
@@ -59,7 +59,7 @@ private:
     // const std::array<double, 7> nullGain = {{1, 1, 1, 1, 1, 1, 1}};
     Eigen::Array<double, 7, 1> nullGain;
     // nullspace gradient constant
-    double alpha = 10.;
+    double alpha = 1;
     // nullspace gradient weight
     Eigen::Array<double, 7, 1> nullWeight;
     // whether to do coriolis compensation

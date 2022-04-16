@@ -9,7 +9,7 @@
 
 
 namespace oscComms {
-    Listener listener(CommsDataType::DELTA_POSE, "tcp://192.168.1.2:2069");
+    Listener listener(CommsDataType::DELTA_POSE_NULL_POSE, "tcp://192.168.1.2:2069");
     Publisher publisher("tcp://192.168.1.3:2096");
 }
 
@@ -22,13 +22,14 @@ namespace oscRobotContext {
 Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
     count = start;
     jointMessage = sendJoints;
+    jointMessage = true;
     deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     gripperCommand = -100.0;
 
     useNullspace = nullspace;
     restPose << 0.0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4;
-    nullGain << 1, 1, 1, 1, 1, 1, 1;
-    nullWeight << 1, 1, 1, 1, 1, 1, 1;
+    nullGain << 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2;
+    nullWeight << 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2;
 
     coriolisCompensation = coriolis;
     auto robotState = oscRobotContext::robot.readOnce();
@@ -46,18 +47,28 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         oscComms::listener.readMessage();
         for(size_t i = 0; i < 6; i++)
             deltaPose[i] = oscComms::listener.values[i];
+        if(oscComms::listener.type == CommsDataType::DELTA_POSE_NULL_POSE) {
+            for(size_t i = 0; i < 7; i++)
+                restPose[i] = oscComms::listener.values[6+i];
+        }
+
+        // std::cout << "nullspace target ";
+        // for(size_t i = 0; i < 7; i++)
+        //     std::cout << restPose[i];
+        // std::cout << std::endl;
+
         // check for gripper command
-        if(
-            oscComms::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
-            oscComms::listener.type == CommsDataType::POSE_GRIPPER) {
-                if(
-                    fabs(oscComms::listener.values[6] - gripperCommand) > 0.01 
-                ) {
-                    gripperCommand = oscComms::listener.values[6];
-                    // stop the current gripper movement
-                    oscRobotContext::gripper.stop();
-                }
-            }
+        // if(
+        //     oscComms::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
+        //     oscComms::listener.type == CommsDataType::POSE_GRIPPER) {
+        //         if(
+        //             fabs(oscComms::listener.values[6] - gripperCommand) > 0.01 
+        //         ) {
+        //             gripperCommand = oscComms::listener.values[6];
+        //             // stop the current gripper movement
+        //             oscRobotContext::gripper.stop();
+        //         }
+        //     }
     }
     // write state
     if((count - 1) % 4 == 0) {
@@ -73,7 +84,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             Eigen::Affine3d transform(Eigen::Matrix4d::Map(robotState.O_T_EE.data()));
             Eigen::Vector3d position(transform.translation());      
             Eigen::Quaterniond orientation(transform.linear());
-            std::vector<double> poseBroadcast(9);
+            std::vector<double> poseBroadcast(7);
             // Eigen::Map<const Eigen::Vector3d>(poseBroadcast.data(), position.rows(), position.cols()) = position;
             poseBroadcast[0] = position(0);
             poseBroadcast[1] = position(1);
@@ -82,10 +93,10 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             poseBroadcast[4] = orientation.y();
             poseBroadcast[5] = orientation.z();
             poseBroadcast[6] = orientation.w();
-            franka::GripperState gripperState = oscRobotContext::gripper.readOnce();
-            double gripperWidth = gripperState.width;
-            poseBroadcast[7] = gripperWidth / 2;
-            poseBroadcast[8] = gripperWidth / 2;
+            // franka::GripperState gripperState = oscRobotContext::gripper.readOnce();
+            // double gripperWidth = gripperState.width;
+            // poseBroadcast[7] = gripperWidth / 2;
+            // poseBroadcast[8] = gripperWidth / 2;
             oscComms::publisher.writeMessage(poseBroadcast);
         }
     }
@@ -105,15 +116,15 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> jointVel(jointVelocityArray.data());
     
     // convert to Eigen
-    Eigen::Map<const Eigen::Matrix<double, 7, 7>> mass(massArray.data());
+    Eigen::Map<Eigen::Matrix<double, 7, 7>> mass(massArray.data());
     Eigen::Matrix<double, 7, 7> massInv = mass.inverse();
     Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobianArray.data());
     Eigen::Matrix<double, 7, 6> jacobianT = jacobian.transpose();
 
     // add extra mass to the mass matrix
-    // mass(4, 4) += 0.10;
-    // mass(5, 5) += 0.10;
-    // mass(6, 6) += 0.10;
+    mass(4, 4) += 0.20;
+    mass(5, 5) += 0.20;
+    mass(6, 6) += 0.20;
     
     // ee velocity
     Eigen::Array<double, 6, 1> eeVelocityArray = (jacobian * jointVel).array();
@@ -133,7 +144,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     taskWrenchMotion = (armMassMatrixTask * taskWrenchMotion.matrix()).array();
     Eigen::VectorXd tau_d = jacobianT * taskWrenchMotion.matrix();
 
-    // nullspace control
+    // // nullspace control
     if(useNullspace) {
         // inertia weighted pseudoinverse
         Eigen::Matrix<double, 7, 6> inertiaWeightedPInv = (
@@ -145,36 +156,47 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         );
         // nullspace torque action
         Eigen::Array<double, 7, 1> tauNull = (
-            -1 * nullGain * jointVel.array() - alpha * nullWeight * (jointPos - jointVel).array()
+            -1 * nullGain * jointVel.array() - alpha * nullWeight * (jointPos.array() - restPose)
         );
+        
+        auto addOn = projector * tauNull.matrix();
+        for(int i = 0; i < 7; i++) 
+            std::cout << addOn[i] << " ";
+        std::cout << std::endl;
+
         // apply nullspace action
         tau_d += (
             projector * tauNull.matrix()
         );
     }
 
-    // coriolis compensation
-    if(coriolisCompensation) {
-        // calculate jacobian using finite difference
-        Eigen::Matrix<double, 6, 7> jacobianDerivative = (jacobian - prevJacobian) / 0.001; 
-        prevJacobian = jacobian;
-        // joint space coriolis
-        Eigen::Map<const Eigen::Matrix<double, 7, 1>> coriolis(
-            oscRobotContext::model.coriolis(robotState).data()
-        );
-        // apply coriolis compensation
-        tau_d += (
-            coriolis - (jacobianT * armMassMatrixTask * jacobianDerivative * jointVel.matrix())
-        );
-    }
+    // // coriolis compensation
+    // if(coriolisCompensation) {
+    //     // calculate jacobian using finite difference
+    //     Eigen::Matrix<double, 6, 7> jacobianDerivative = (jacobian - prevJacobian) / 0.001; 
+    //     prevJacobian = jacobian;
+    //     // joint space coriolis
+    //     Eigen::Map<const Eigen::Matrix<double, 7, 1>> coriolis(
+    //         oscRobotContext::model.coriolis(robotState).data()
+    //     );
+    //     // apply coriolis compensation
+    //     tau_d += (
+    //         coriolis - (jacobianT * armMassMatrixTask * jacobianDerivative * jointVel.matrix())
+    //     );
+    // }
 
     // convert back to std::array
     std::array<double, 7> tau_d_array{};
     Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
 
+    for(size_t i = 0; i < 7; i++) {
+        if(tau_d_array[i] > 0.9 * torqueMax[i])
+            tau_d_array[i] = 0.9 *  torqueMax[i];
+    }
+
     // gripper command
-    if(gripperCommand != -100)
-        oscRobotContext::gripper.move(gripperCommand, 0.1);
+    // if(gripperCommand != -100)
+    //     oscRobotContext::gripper.move(gripperCommand, 0.1);
     
     return tau_d_array;
 }

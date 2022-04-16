@@ -1,5 +1,3 @@
-#pragma once
-
 #include "listener.h"
 #include <iostream>
 
@@ -33,13 +31,13 @@ void Listener::readMessage() {
  
     int numValues = message.size() / sizeof(double);
     assert(numValues == typeLengths[type]);
-    std::cout << "num values " << numValues << std::endl;
+    //std::cout << "num values " << numValues << std::endl;
 
     for(int i = 0; i < numValues; i++) {
         values[i] = *(reinterpret_cast<double*>(message.data()) + i);
-        std::cout << values[i] << std::endl;
+        // std::cout << values[i] << std::endl;
     }
 
-    for(auto x : values)
-        std::cout << "array vals " << x << std::endl;
+    // for(auto x : values)
+    //     std::cout << "array vals " << x << std::endl;
 }

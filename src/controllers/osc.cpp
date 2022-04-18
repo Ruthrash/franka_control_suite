@@ -1,4 +1,5 @@
-#include "osc.h"
+#include "controllers/osc.h"
+#include "context/context.h"
 
 #include <franka/exception.h>
 #include <franka/robot.h>
@@ -8,16 +9,16 @@
 #include <math.h>
 
 
-namespace oscComms {
-    Listener listener(CommsDataType::DELTA_POSE_NULL_POSE, "tcp://192.168.1.2:2069");
-    Publisher publisher("tcp://192.168.1.3:2096");
-}
+// namespace oscComms {
+//     Listener listener(CommsDataType::DELTA_POSE_NULL_POSE, "tcp://192.168.1.2:2069");
+//     Publisher publisher("tcp://192.168.1.3:2096");
+// }
 
-namespace oscRobotContext {
-    franka::Robot robot("192.168.0.1");
-    franka::Gripper gripper("192.168.0.1");
-    franka::Model model = robot.loadModel();
-}
+// namespace oscRobotContext {
+//     franka::Robot robot("192.168.0.1");
+//     franka::Gripper gripper("192.168.0.1");
+//     franka::Model model = robot.loadModel();
+// }
 
 Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
     count = start;
@@ -28,13 +29,13 @@ Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
 
     useNullspace = nullspace;
     restPose << 0.0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4;
-    nullGain << 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2;
-    nullWeight << 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2;
+    nullGain << 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02;
+    nullWeight << 0.7, 0.7, 0.7, 0.7, 0.3, 0.18, 0.01;
 
     coriolisCompensation = coriolis;
-    auto robotState = oscRobotContext::robot.readOnce();
+    auto robotState = robotContext::robot.readOnce();
     prevJacobian = Eigen::Map<Eigen::Matrix<double, 6, 7>>(
-        oscRobotContext::model.zeroJacobian(
+        robotContext::model.zeroJacobian(
             franka::Frame::kEndEffector, robotState
         ).data()
     );
@@ -44,12 +45,12 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
                                 franka::Duration period) {
     // read command
     if(count % 10 == 0) {
-        oscComms::listener.readMessage();
+        commsContext::listener.readMessage();
         for(size_t i = 0; i < 6; i++)
-            deltaPose[i] = oscComms::listener.values[i];
-        if(oscComms::listener.type == CommsDataType::DELTA_POSE_NULL_POSE) {
+            deltaPose[i] = commsContext::listener.values[i];
+        if(commsContext::listener.type == CommsDataType::DELTA_POSE_NULL_POSE) {
             for(size_t i = 0; i < 7; i++)
-                restPose[i] = oscComms::listener.values[6+i];
+                restPose[i] = commsContext::listener.values[6+i];
         }
 
         // std::cout << "nullspace target ";
@@ -59,14 +60,14 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
 
         // check for gripper command
         // if(
-        //     oscComms::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
-        //     oscComms::listener.type == CommsDataType::POSE_GRIPPER) {
+        //     commsContext::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
+        //     commsContext::listener.type == CommsDataType::POSE_GRIPPER) {
         //         if(
-        //             fabs(oscComms::listener.values[6] - gripperCommand) > 0.01 
+        //             fabs(commsContext::listener.values[6] - gripperCommand) > 0.01 
         //         ) {
-        //             gripperCommand = oscComms::listener.values[6];
+        //             gripperCommand = commsContext::listener.values[6];
         //             // stop the current gripper movement
-        //             oscRobotContext::gripper.stop();
+        //             robotContext::gripper.stop();
         //         }
         //     }
     }
@@ -77,8 +78,8 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
                 robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
                 robotState.q[4], robotState.q[5], robotState.q[6]
             };
-        
-            oscComms::publisher.writeMessage(jointBroadcast);
+            // std::cout << "sending message" << std::endl;
+            commsContext::publisher.writeMessage(jointBroadcast);
         }
         else {
             Eigen::Affine3d transform(Eigen::Matrix4d::Map(robotState.O_T_EE.data()));
@@ -93,19 +94,19 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             poseBroadcast[4] = orientation.y();
             poseBroadcast[5] = orientation.z();
             poseBroadcast[6] = orientation.w();
-            // franka::GripperState gripperState = oscRobotContext::gripper.readOnce();
+            // franka::GripperState gripperState = robotContext::gripper.readOnce();
             // double gripperWidth = gripperState.width;
             // poseBroadcast[7] = gripperWidth / 2;
             // poseBroadcast[8] = gripperWidth / 2;
-            oscComms::publisher.writeMessage(poseBroadcast);
+            commsContext::publisher.writeMessage(poseBroadcast);
         }
     }
     count++;
 
     // joint space mass matrix
-    auto massArray = oscRobotContext::model.mass(robotState);
+    auto massArray = robotContext::model.mass(robotState);
     // geometrix jacobian
-    auto jacobianArray = oscRobotContext::model.zeroJacobian(
+    auto jacobianArray = robotContext::model.zeroJacobian(
         franka::Frame::kEndEffector, robotState
     );
     // joint velocity
@@ -156,12 +157,22 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         );
         // nullspace torque action
         Eigen::Array<double, 7, 1> tauNull = (
-            -1 * nullGain * jointVel.array() - alpha * nullWeight * (jointPos.array() - restPose)
+            0 * -1 * nullGain * jointVel.array() - alpha * nullWeight * (jointPos.array() - restPose)
         );
         
         auto addOn = projector * tauNull.matrix();
+        std::cout << "=====================================================" << std::endl;
+        std::cout << "Null space target: ";
+        for(int i = 0; i < 7; i++) 
+            std::cout << restPose[i] << " ";
+        std::cout << std::endl;
+        std::cout << "Null space torques: ";
         for(int i = 0; i < 7; i++) 
             std::cout << addOn[i] << " ";
+        std::cout << std::endl;
+        std::cout << "Joint position: ";
+        for(int i = 0; i < 7; i++) 
+            std::cout << robotState.q[i] << " ";
         std::cout << std::endl;
 
         // apply nullspace action
@@ -177,7 +188,7 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     //     prevJacobian = jacobian;
     //     // joint space coriolis
     //     Eigen::Map<const Eigen::Matrix<double, 7, 1>> coriolis(
-    //         oscRobotContext::model.coriolis(robotState).data()
+    //         robotContext::model.coriolis(robotState).data()
     //     );
     //     // apply coriolis compensation
     //     tau_d += (
@@ -190,13 +201,13 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
 
     for(size_t i = 0; i < 7; i++) {
-        if(tau_d_array[i] > 0.9 * torqueMax[i])
-            tau_d_array[i] = 0.9 *  torqueMax[i];
+        if(tau_d_array[i] > 0.7 * torqueMax[i])
+            tau_d_array[i] = 0.7 *  torqueMax[i];
     }
 
     // gripper command
     // if(gripperCommand != -100)
-    //     oscRobotContext::gripper.move(gripperCommand, 0.1);
+    //     robotContext::gripper.move(gripperCommand, 0.1);
     
     return tau_d_array;
 }

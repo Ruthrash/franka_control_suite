@@ -13,21 +13,7 @@
 #include <franka/model.h>
 #include <franka/robot_state.h>
 
-#include "listener.h"
-#include "publisher.h"
-
 #include <memory>
-
-namespace oscComms {
-    extern Listener listener;
-    extern Publisher publisher;
-}
-
-namespace oscRobotContext {
-    extern franka::Robot robot;
-    extern franka::Gripper gripper;
-    extern franka::Model model;
-}
 
 class Osc {
 public:
@@ -59,7 +45,7 @@ private:
     // const std::array<double, 7> nullGain = {{1, 1, 1, 1, 1, 1, 1}};
     Eigen::Array<double, 7, 1> nullGain;
     // nullspace gradient constant
-    double alpha = 1;
+    double alpha = 5;
     // nullspace gradient weight
     Eigen::Array<double, 7, 1> nullWeight;
     // whether to do coriolis compensation

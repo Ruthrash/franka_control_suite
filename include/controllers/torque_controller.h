@@ -12,32 +12,18 @@
 #include <franka/model.h>
 #include <franka/robot_state.h>
 
-#include "joint_listener.h"
-#include "joint_publisher.h"
-
 #include <memory>
 
 #define DOF 7 
 
-namespace torqueComms {
-    extern JointListener jointListener;
-    extern JointPublisher jointPublisher;
-    
-}
-
-namespace robotContext {
-    extern franka::Robot robot;
-    extern franka::Model model;
-    extern franka::Gripper gripper;
-}
 
 class TorqueGenerator {
 public:
     
     TorqueGenerator(int start, bool useGripper);
-    TorqueGenerator(const std::array<double, 9>& q_goal);
+    TorqueGenerator(const std::vector<double>& q_goal);
     // desired joint configuration
-    std::array<double, 9> q_goal;
+    std::vector<double> q_goal;
     // count for receiving data 
     size_t count;
     

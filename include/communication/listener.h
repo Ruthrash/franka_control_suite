@@ -31,6 +31,7 @@ public:
     Listener(CommsDataType dataType, std::string portId);
     Listener(const Listener& listener);
     void readMessage();
+    void setDataType(CommsDataType dataType);
 
     std::vector<double> values;
     zmq::context_t ctx;

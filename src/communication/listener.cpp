@@ -1,16 +1,19 @@
-#include "listener.h"
+#include "communication/listener.h"
 #include <iostream>
 
 Listener::Listener(CommsDataType dataType, std::string portId) : type(dataType), socket(ctx, zmq::socket_type::sub) {
     int confl = 1;
+    std::cout << "before connect" << std::endl;
     socket.setsockopt(ZMQ_CONFLATE, &confl, sizeof(int));
+    std::cout << "set sock opt done" << std::endl;
     socket.connect(portId);
+    std::cout << "after connect connect" << std::endl;
     socket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    std::cout << "second sock opt" << std::endl;
     port = portId;
     for(size_t i = 0; i < typeLengths[type]; i++)
         values.push_back(0.0);
-    readMessage();
-    std::cout << "values size " << values.size() << std::endl;
+    // readMessage();
 }
 
 Listener::Listener(const Listener& listener) : type(listener.type), socket(ctx, zmq::socket_type::sub){
@@ -40,4 +43,11 @@ void Listener::readMessage() {
 
     // for(auto x : values)
     //     std::cout << "array vals " << x << std::endl;
+}
+
+void Listener::setDataType(CommsDataType dataType) {
+    type = dataType;
+    values.resize(typeLengths[dataType]);
+    for(size_t i = 0; i < typeLengths[type]; i++)
+        values[i] = 0.0;
 }

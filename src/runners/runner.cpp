@@ -6,9 +6,10 @@
 #include "controllers/motion_controller.h"
 #include "context/context.h"
 
+
 int main(int argc, char** argv) {
     try {
-        bool useOSC = true;
+        bool useOSC = false;
 
         std::cout << "moving robot to default position..." << std::endl;
         std::array<double, 7> qRest = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};

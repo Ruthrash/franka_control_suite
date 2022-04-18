@@ -7,6 +7,7 @@
 #include "communication/subscriber.h"
 #include "communication/publisher.h"
 
+
 namespace robotContext {
     extern franka::Robot robot;
     extern franka::Gripper gripper;

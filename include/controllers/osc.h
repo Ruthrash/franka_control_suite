@@ -15,6 +15,7 @@
 
 #include <memory>
 
+
 class Osc {
 public:
     Osc(int start, bool sendJoints, bool nullspace = true, bool coriolis = false);
@@ -25,7 +26,13 @@ private:
     // stiffness
     const std::array<double, 6> k_s = {{60 / 2.5, 60 / 2.5, 60 / 2.5, 180 / 3, 180 / 3, 180 / 3}};
     // damping gain
-    const std::array<double, 6> k_d = {{8 / 1, 8 / 1, 8 / 1, 8 / 1, 8 / 1, 8 / 1}};
+    const std::array<double, 6> k_d = {{8 / 1.4, 8 / 1.4, 8 / 1.4, 8 / 1, 8 / 1, 8 / 1}};
+    // integral gain 
+    const std::array<double, 6> k_i = {{0.2, 0.2, 0.2, 0, 0, 0}};
+    // integral
+    std::array<double, 6> integral = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+    // previous error
+    std::array<double, 6> prevError = {{0, 0, 0, 0, 0, 0}};
     // torque limits
     const std::array<double, 7> torqueMax = {{87, 87, 87, 87, 12, 12, 12}};
     // count for receiving data

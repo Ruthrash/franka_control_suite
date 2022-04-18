@@ -1,6 +1,3 @@
-#include "controllers/osc.h"
-#include "context/context.h"
-
 #include <franka/exception.h>
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
@@ -8,17 +5,9 @@
 #include <iostream>
 #include <math.h>
 
+#include "controllers/osc.h"
+#include "context/context.h"
 
-// namespace oscComms {
-//     Listener listener(CommsDataType::DELTA_POSE_NULL_POSE, "tcp://192.168.1.2:2069");
-//     Publisher publisher("tcp://192.168.1.3:2096");
-// }
-
-// namespace oscRobotContext {
-//     franka::Robot robot("192.168.0.1");
-//     franka::Gripper gripper("192.168.0.1");
-//     franka::Model model = robot.loadModel();
-// }
 
 Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
     count = start;
@@ -43,36 +32,8 @@ Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
 
 franka::Torques Osc::operator()(const franka::RobotState& robotState,
                                 franka::Duration period) {
-    // read command
-    if(count % 10 == 0) {
-        commsContext::subscriber.readMessage();
-        for(size_t i = 0; i < 6; i++)
-            deltaPose[i] = commsContext::subscriber.values[i];
-        if(commsContext::subscriber.type == CommsDataType::DELTA_POSE_NULL_POSE) {
-            for(size_t i = 0; i < 7; i++)
-                restPose[i] = commsContext::subscriber.values[6+i];
-        }
-
-        // std::cout << "nullspace target ";
-        // for(size_t i = 0; i < 7; i++)
-        //     std::cout << restPose[i];
-        // std::cout << std::endl;
-
-        // check for gripper command
-        // if(
-        //     commsContext::listener.type == CommsDataType::DELTA_POSE_GRIPPER || 
-        //     commsContext::listener.type == CommsDataType::POSE_GRIPPER) {
-        //         if(
-        //             fabs(commsContext::listener.values[6] - gripperCommand) > 0.01 
-        //         ) {
-        //             gripperCommand = commsContext::listener.values[6];
-        //             // stop the current gripper movement
-        //             robotContext::gripper.stop();
-        //         }
-        //     }
-    }
     // write state
-    if((count - 1) % 4 == 0) {
+    if((count - 1) % 2 == 0) {
         if(jointMessage) {
             std::vector<double> jointBroadcast = {
                 robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
@@ -94,11 +55,17 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             poseBroadcast[4] = orientation.y();
             poseBroadcast[5] = orientation.z();
             poseBroadcast[6] = orientation.w();
-            // franka::GripperState gripperState = robotContext::gripper.readOnce();
-            // double gripperWidth = gripperState.width;
-            // poseBroadcast[7] = gripperWidth / 2;
-            // poseBroadcast[8] = gripperWidth / 2;
             commsContext::publisher.writeMessage(poseBroadcast);
+        }
+    }
+    // read command
+    if(count % 3 == 0) {
+        commsContext::subscriber.readMessage();
+        for(size_t i = 0; i < 6; i++)
+            deltaPose[i] = commsContext::subscriber.values[i];
+        if(commsContext::subscriber.type == CommsDataType::DELTA_POSE_NULL_POSE) {
+            for(size_t i = 0; i < 7; i++)
+                restPose[i] = commsContext::subscriber.values[6+i];
         }
     }
     count++;
@@ -123,18 +90,34 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     Eigen::Matrix<double, 7, 6> jacobianT = jacobian.transpose();
 
     // add extra mass to the mass matrix
-    mass(4, 4) += 0.20;
-    mass(5, 5) += 0.20;
-    mass(6, 6) += 0.20;
+    mass(4, 4) += 0.1;
+    mass(5, 5) += 0.1;
+    mass(6, 6) += 0.1;
     
     // ee velocity
     Eigen::Array<double, 6, 1> eeVelocityArray = (jacobian * jointVel).array();
-    // auto eeVelocityArray = robotState.O_dP_EE_d;
-
+    
     // task space gains
     Eigen::Array<double, 6, 1> taskWrenchMotion;
-    for(size_t i = 0; i < 6; i++)
+    // std::cout << "Integral ";
+    for(size_t i = 0; i < 6; i++) {
         taskWrenchMotion[i] = k_s[i] * deltaPose[i] - k_d[i] * eeVelocityArray[i];
+        if(deltaPose[i] <= 0.1) {
+            double increment = deltaPose[i] * period.toSec();
+            // reset if integral switches sign 
+            if(deltaPose[i] * prevError[i] < 0)
+                integral[i] = 0;
+            else
+                integral[i] += increment; 
+        }
+        else {
+            integral[i] = 0;
+        }
+        prevError[i] = deltaPose[i];
+        std::cout << integral[i] << " ";
+        deltaPose[i] += 0 * k_i[i] * integral[i];
+    }
+    std::cout << std::endl;
 
     // task space mass 
     Eigen::Matrix<double, 6, 6> armMassMatrixTask = (
@@ -200,14 +183,18 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     std::array<double, 7> tau_d_array{};
     Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
 
-    for(size_t i = 0; i < 7; i++) {
-        if(tau_d_array[i] > 0.7 * torqueMax[i])
-            tau_d_array[i] = 0.7 *  torqueMax[i];
-    }
+    // std::cout << "Torque output: ";
+    // for(size_t i = 0; i < 7; i++) {
+    //     if(tau_d_array[i] > 0.9 * torqueMax[i])
+    //         tau_d_array[i] = 0.9 *  torqueMax[i];
+    //     std::cout << tau_d_array[i] << " ";
+    // }
+    // std::cout << std::endl;
 
-    // gripper command
-    // if(gripperCommand != -100)
-    //     robotContext::gripper.move(gripperCommand, 0.1);
+    // std::cout << "Task wrench ";
+    // for(size_t i = 0; i < 6; i++)
+    //     std::cout << taskWrenchMotion[i] << " ";
+    // std::cout << std::endl;
     
     return tau_d_array;
 }

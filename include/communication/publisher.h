@@ -3,6 +3,7 @@
 #include <zmq.hpp>
 #include <vector>
 
+
 class Publisher {
 public:
     Publisher(std::string port);

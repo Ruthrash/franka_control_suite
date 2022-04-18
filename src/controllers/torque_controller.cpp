@@ -1,6 +1,3 @@
-#include "controllers/torque_controller.h"
-#include "context/context.h"
-
 #include <algorithm>
 #include <array>
 #include <vector>
@@ -11,6 +8,11 @@
 #include <franka/exception.h>
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
+
+#include "controllers/torque_controller.h"
+#include "context/context.h"
+
+
 
 TorqueGenerator::TorqueGenerator(int start, bool useGripper) : useGripper(useGripper) {
     count = start;
@@ -23,8 +25,15 @@ TorqueGenerator::TorqueGenerator(const std::vector<double>& q_goal) : q_goal(q_g
 
 franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_state,
                                                    franka::Duration period) {
+    if((count-1)%3==0){
+        std::vector<double> jointBroadcast = {
+            robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6],
+        };
+        
+        commsContext::publisher.writeMessage(jointBroadcast);
+    }
     // coriolis compensation
-    if(count % 17 == 0) {
+    if(count % 3 == 0) {
         commsContext::subscriber.readMessage();
         q_goal = commsContext::subscriber.values;
     }
@@ -63,14 +72,6 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         // clamp torque
         if(tau_d_calculated[i] > 0.7 * torque_max[i])
             tau_d_calculated[i] = 0.7 *  torque_max[i];
-    }
-
-    if((count-1)%4==0){
-        std::vector<double> jointBroadcast = {
-            robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6],
-        };
-        
-        commsContext::publisher.writeMessage(jointBroadcast);
     }
 
 

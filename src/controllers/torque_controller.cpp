@@ -25,8 +25,8 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
                                                    franka::Duration period) {
     // coriolis compensation
     if(count % 17 == 0) {
-        commsContext::listener.readMessage();
-        q_goal = commsContext::listener.values;
+        commsContext::subscriber.readMessage();
+        q_goal = commsContext::subscriber.values;
     }
 
     count++;

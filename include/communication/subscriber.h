@@ -24,12 +24,12 @@ inline std::map<CommsDataType, int> typeLengths = {
     {CommsDataType::POSE_GRIPPER, 6 + 1},
 };
 
-class Listener {
+class Subscriber {
 public:
     CommsDataType type;
 
-    Listener(CommsDataType dataType, std::string portId);
-    Listener(const Listener& listener);
+    Subscriber(CommsDataType dataType, std::string portId);
+    Subscriber(const Subscriber& Subscriber);
     void readMessage();
     void setDataType(CommsDataType dataType);
 

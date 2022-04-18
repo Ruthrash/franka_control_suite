@@ -45,12 +45,12 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
                                 franka::Duration period) {
     // read command
     if(count % 10 == 0) {
-        commsContext::listener.readMessage();
+        commsContext::subscriber.readMessage();
         for(size_t i = 0; i < 6; i++)
-            deltaPose[i] = commsContext::listener.values[i];
-        if(commsContext::listener.type == CommsDataType::DELTA_POSE_NULL_POSE) {
+            deltaPose[i] = commsContext::subscriber.values[i];
+        if(commsContext::subscriber.type == CommsDataType::DELTA_POSE_NULL_POSE) {
             for(size_t i = 0; i < 7; i++)
-                restPose[i] = commsContext::listener.values[6+i];
+                restPose[i] = commsContext::subscriber.values[6+i];
         }
 
         // std::cout << "nullspace target ";

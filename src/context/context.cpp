@@ -7,6 +7,6 @@ namespace robotContext {
 }
 
 namespace commsContext {
-    Listener listener(CommsDataType::DELTA_POSE_NULL_POSE, "tcp://192.168.1.2:2069");
+    Subscriber subscriber(CommsDataType::DELTA_POSE_NULL_POSE, "tcp://192.168.1.2:2069");
     Publisher publisher("tcp://192.168.1.3:2096");
 }

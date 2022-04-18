@@ -17,14 +17,14 @@ int main(int argc, char** argv) {
         std::cout << "finished moving robot to default position" << std::endl;
 
         if(useOSC) {
-            commsContext::listener.setDataType(CommsDataType::DELTA_POSE_NULL_POSE);
+            commsContext::subscriber.setDataType(CommsDataType::DELTA_POSE_NULL_POSE);
             Osc osc(1, true, false, false);
             while(true) {
                 robotContext::robot.control(osc);
             }
         }
         else {
-            commsContext::listener.setDataType(CommsDataType::JOINT_ANGLES);
+            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES);
             TorqueGenerator torqueController(1, false);
             while(true) {
                 robotContext::robot.control(torqueController);

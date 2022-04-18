@@ -4,7 +4,7 @@
 #include <franka/gripper.h>
 #include <franka/model.h>
 
-#include "communication/listener.h"
+#include "communication/subscriber.h"
 #include "communication/publisher.h"
 
 namespace robotContext {
@@ -14,6 +14,6 @@ namespace robotContext {
 }
 
 namespace commsContext {
-    extern Listener listener;
+    extern Subscriber subscriber;
     extern Publisher publisher;
 }

@@ -35,6 +35,13 @@ int main(int argc, char** argv) {
         else {
             commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES);
             TorqueGenerator torqueController(1, false);
+            // initialize subscriber thread
+            std::thread subscribeThread([]() {
+                while(true) {
+                    commsContext::subscriber.readMessage();
+                }
+            });
+            // run control loop
             while(true) {
                 robotContext::robot.control(torqueController);
             }

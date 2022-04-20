@@ -1,5 +1,6 @@
 #include <franka/exception.h>
 #include <iostream>
+#include <thread>
 
 #include "controllers/osc.h"
 #include "controllers/torque_controller.h"
@@ -20,6 +21,13 @@ int main(int argc, char** argv) {
         if(useOSC) {
             commsContext::subscriber.setDataType(CommsDataType::DELTA_POSE_NULL_POSE);
             Osc osc(1, true, false, false);
+            // initialize subscriber thread
+            std::thread subscribeThread([]() {
+                while(true) {
+                    commsContext::subscriber.readMessage();
+                }
+            });
+            // run control loop
             while(true) {
                 robotContext::robot.control(osc);
             }

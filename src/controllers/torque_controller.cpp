@@ -33,10 +33,11 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         commsContext::publisher.writeMessage(jointBroadcast);
     }
     // coriolis compensation
-    if(count % 3 == 0) {
-        commsContext::subscriber.readMessage();
-        q_goal = commsContext::subscriber.values;
-    }
+    // if(count % 3 == 0) {
+        // commsContext::subscriber.readMessage();
+        // q_goal = commsContext::subscriber.values;
+    // }
+    commsContext::subscriber.readValues(q_goal);
 
     count++;
     // read current coriolis terms from model

@@ -27,10 +27,19 @@ void Subscriber::readMessage() {
  
     int numValues = message.size() / sizeof(double);
     assert(numValues == typeLengths[type]);
-
+    
+    std::lock_guard<std::mutex> guard(accessValuesMutex);
     for(int i = 0; i < numValues; i++)
         values[i] = *(reinterpret_cast<double*>(message.data()) + i);
+}
 
+void Subscriber::readValues(std::vector<double>& output) {
+    std::lock_guard<std::mutex> guard(accessValuesMutex);
+    if(output.size != values.size) 
+        outputs.resize(values.size);
+
+    for(size_t i = 0; i < values.size; i++)
+        outputs[i] = values[i];
 }
 
 void Subscriber::setDataType(CommsDataType dataType) {

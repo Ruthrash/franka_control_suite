@@ -59,15 +59,17 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
         }
     }
     // read command
-    if(count % 3 == 0) {
-        commsContext::subscriber.readMessage();
-        for(size_t i = 0; i < 6; i++)
-            deltaPose[i] = commsContext::subscriber.values[i];
-        if(commsContext::subscriber.type == CommsDataType::DELTA_POSE_NULL_POSE) {
-            for(size_t i = 0; i < 7; i++)
-                restPose[i] = commsContext::subscriber.values[6+i];
-        }
-    }
+    // if(count % 3 == 0) {
+    //     commsContext::subscriber.readMessage();
+    //     for(size_t i = 0; i < 6; i++)
+    //         deltaPose[i] = commsContext::subscriber.values[i];
+    //     if(commsContext::subscriber.type == CommsDataType::DELTA_POSE_NULL_POSE) {
+    //         for(size_t i = 0; i < 7; i++)
+    //             restPose[i] = commsContext::subscriber.values[6+i];
+    //     }
+    // }
+
+    commsContext::subscriber.readValues(deltaPose);
     count++;
 
     // joint space mass matrix

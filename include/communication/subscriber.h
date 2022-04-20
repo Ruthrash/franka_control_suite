@@ -3,6 +3,7 @@
 #include <zmq.hpp>
 #include <vector>
 #include <map>
+#include <thread>
 
 
 enum class CommsDataType {
@@ -26,12 +27,17 @@ inline std::map<CommsDataType, int> typeLengths = {
 };
 
 class Subscriber {
+private:
+    std::mutex accessValuesMutex;
+
+
 public:
     CommsDataType type;
 
     Subscriber(CommsDataType dataType, std::string portId);
     Subscriber(const Subscriber& Subscriber);
     void readMessage();
+    void readValues(std::vector<double>& output);
     void setDataType(CommsDataType dataType);
 
     std::vector<double> values;

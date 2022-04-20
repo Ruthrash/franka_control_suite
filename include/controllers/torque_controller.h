@@ -8,32 +8,24 @@
 #include <franka/control_types.h>
 #include <franka/duration.h>
 #include <franka/robot.h>
+#include <franka/gripper.h>
 #include <franka/model.h>
 #include <franka/robot_state.h>
-
-#include "joint_listener.h"
-#include "joint_publisher.h"
 
 #include <memory>
 
 #define DOF 7 
 
-namespace torqueComms {
-    extern JointListener jointListener;
-    extern JointPublisher jointPublisher;
-    
-}
-
-namespace robotContext {
-    extern franka::Robot robot;
-    extern franka::Model model;
-}
 
 class TorqueGenerator {
 public:
     
-    TorqueGenerator(int start);
-    
+    TorqueGenerator(int start, bool useGripper);
+    TorqueGenerator(const std::vector<double>& q_goal);
+    // desired joint configuration
+    std::vector<double> q_goal;
+    // count for receiving data 
+    size_t count;
     
     franka::Torques operator()(const franka::RobotState& robot_state, franka::Duration period);
 
@@ -57,8 +49,6 @@ private:
     const std::array<double, DOF> torque_max = {{87, 87, 87, 87, 12, 12, 12}};
     // calculated torque output
     std::array<double, DOF> torque_output = {{0, 0, 0, 0, 0, 0, 0}};
-    // count for receiving data 
-    size_t count;
-    // desired joint configuration
-    std::array<double, 9> q_goal;
+
+    bool useGripper;
 };

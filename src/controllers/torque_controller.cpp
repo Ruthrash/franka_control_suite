@@ -1,5 +1,3 @@
-#include "torque_controller.h"
-
 #include <algorithm>
 #include <array>
 #include <vector>
@@ -11,30 +9,35 @@
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
 
-namespace torqueComms {
-    JointListener jointListener("tcp://192.168.1.2:2069");
-    JointPublisher jointPublisher("tcp://192.168.1.3:2096");
-    
-}
+#include "controllers/torque_controller.h"
+#include "context/context.h"
 
-namespace robotContext {
-    franka::Robot robot("192.168.0.1");
-    franka::Model model = robot.loadModel();
-}
 
-TorqueGenerator::TorqueGenerator(int start) {
+
+TorqueGenerator::TorqueGenerator(int start, bool useGripper) : useGripper(useGripper) {
     count = start;
-    q_goal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4, 0, 0}; 
+    q_goal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4, 0.04, 0.04}; 
+}
+
+TorqueGenerator::TorqueGenerator(const std::vector<double>& q_goal) : q_goal(q_goal) {
+    count = 1;
 }
 
 franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_state,
                                                    franka::Duration period) {
-    // coriolis compensation
-
-    if(count % 10 == 0) {
-        torqueComms::jointListener.readMessage();
-        q_goal = torqueComms::jointListener.jointAngles;
+    if((count-1)%3==0){
+        std::vector<double> jointBroadcast = {
+            robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6],
+        };
+        
+        commsContext::publisher.writeMessage(jointBroadcast);
     }
+    // coriolis compensation
+    // if(count % 3 == 0) {
+        // commsContext::subscriber.readMessage();
+        // q_goal = commsContext::subscriber.values;
+    // }
+    commsContext::subscriber.readValues(q_goal);
 
     count++;
     // read current coriolis terms from model
@@ -46,7 +49,6 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     std::array<double, DOF> tau_d_calculated;
 
     double k_i_term = 0;
-
     for (size_t i = 0; i < DOF; i++) {
         // clamp goal joint position
         if(q_goal[i] < joint_min[i])
@@ -64,32 +66,20 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
             integral[i] = 0;
             k_i_term = 0;
 
-        // tau_d_calculated[i] = k_s[i] * q_error - k_d[i] * robot_state.dq[i];
-
         tau_d_calculated[i] = 2*0.1 * (
             1.9 * k_s[i] * (q_error) 
-            - k_d[i] * robot_state.dq[i]); 
-        // const std::array<double, DOF> k_s = {{700.0, 700.0, 700.0, 900.0, 450.0, 450.0, 300.0}};
-        // const std::array<double, DOF> k_d = {{100.0, 100.0, 100.0, 100.0, 60.0, 50.0, 30.0}};
+            - 2 * k_d[i] * robot_state.dq[i]); 
 
         // clamp torque
-        if(tau_d_calculated[i] > torque_max[i])
-            tau_d_calculated[i] = torque_max[i];
+        if(tau_d_calculated[i] > 0.7 * torque_max[i])
+            tau_d_calculated[i] = 0.7 *  torque_max[i];
     }
 
-    std::cout << "Integral" << std::endl;
-    for(int i = 0; i < 7; i++) 
-        std::cout << integral[i] << " " << std::endl;
-    std::cout << "\n" << std::endl;
 
-    if((count-1)%4==0){
-    std::vector<double> jointBroadcast = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],  
-                                            robot_state.q[4], robot_state.q[5], robot_state.q[6]};
-    
-    torqueComms::jointPublisher.writeMessage(jointBroadcast);
-    }
-   
     std::array<double, DOF> tau_d_rate_limited =
           franka::limitRate(franka::kMaxTorqueRate, tau_d_calculated, robot_state.tau_J_d);
-    return tau_d_rate_limited;
+
+    franka::Torques output(tau_d_rate_limited);
+
+    return output;
 }

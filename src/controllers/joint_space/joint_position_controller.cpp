@@ -21,15 +21,19 @@ JointPositionController::JointPositionController(int start){count =start;}
 JointPositionController::~JointPositionController(){}
 
 namespace torqueComms {
+    //if REAL 
     // JointListener jointListener("tcp://192.168.1.2:2069");
     // JointPublisher jointPublisher("tcp://192.168.1.3:2096");
+    //if sim
     ReferenceSubscriber referenceSubscriber("tcp://127.0.0.1:2069");
     TorqueCommandPublisher torqueCommandPublisher("tcp://127.0.0.1:5069");
 }
 
 namespace robotContext {
+    //if REAL 
     // franka::Robot robot("192.168.0.1");
     // franka::Model model = robot.loadModel();
+    //if sim
     DynamicsModelSubscriber model("tcp://127.0.0.1:3069");
 
 }

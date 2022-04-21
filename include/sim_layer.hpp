@@ -19,6 +19,7 @@ public:
     ~SimLayer();
     void loop(); 
     void control(std::function<franka::Torques(const franka::RobotState&, franka::Duration)> control_callback);
+    franka::RobotState readOnce(); 
 protected:
 
 private: 

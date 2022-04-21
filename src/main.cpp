@@ -4,6 +4,18 @@
 #include "controllers/joint_space/joint_position_controller.hpp"
 
 
+// joint positions, 
+// variable joint impedance,
+// impedance control in end-effector space with high,
+// medium,
+// low, 
+// joint torques,
+
+
+// joint velocities, 
+// and 
+// or variable (policy-controlled) values
+
 int main(int argc, char** argv) {
     try {
         std::cout<<"Before object"<<std::endl;

@@ -43,9 +43,13 @@ void DynamicsModelSubscriber::readMessage() {
     for(int i = 0; i < numValues; i++)
         gravity_comp_[i] = *(reinterpret_cast<double*>(msgs[1].data()) + i);
 
-    numValues = msgs[2].size() / sizeof(double);//inertia
+    numValues = msgs[2].size() / sizeof(double);//jacobian
     for(int i = 0; i < numValues; i++)
-         inertia_matrix_[i] = *(reinterpret_cast<double*>(msgs[2].data()) + i);
+        jacobian[i] = *(reinterpret_cast<double*>(msgs[2].data()) + i);
+
+    numValues = msgs[3].size() / sizeof(double);//inertia
+    for(int i = 0; i < numValues; i++)
+         inertia_matrix_[i] = *(reinterpret_cast<double*>(msgs[3].data()) + i);
 
     socket_.setsockopt(ZMQ_UNSUBSCRIBE, "", 0);
 }
@@ -59,4 +63,7 @@ std::array<double, 7> DynamicsModelSubscriber::gravity(){
 }
 std::array<double, 49> DynamicsModelSubscriber::mass(){
     return inertia_matrix_;
+}
+std::array<double, 42> DynamicsModelSubscriber::zeroJacobian(){
+    return jacobian; 
 }

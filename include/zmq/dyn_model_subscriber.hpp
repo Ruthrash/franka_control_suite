@@ -15,17 +15,19 @@ public:
     zmq::socket_t socket_;
     bool messageChanged_;
     std::string port_;
-
-
-protected:
     std::array<double, 7> coriolis(); 
     std::array<double, 7> gravity(); 
     std::array<double, 49> mass();
+    std::array<double, 42> zeroJacobian();
+
+protected:
+
 
 
 private:
     std::array<double, 7> coriolis_; 
     std::array<double, 7> gravity_comp_; 
     std::array<double, 49> inertia_matrix_; //column major 
+    std::array<double, 42> jacobian; //column major 
     std::array<double, 7> joint_angles_;
 };

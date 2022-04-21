@@ -28,6 +28,9 @@ void SimLayer::control (std::function<franka::Torques(const franka::RobotState&,
                             /*state_.dq[i], state_.q[i], state_.tau_J_d*/
 }
 
+franka::RobotState SimLayer::readOnce(){
+    return zmqComms::robotStateSubscriber.state_;
+} 
 
 void SimLayer::loop()
 {

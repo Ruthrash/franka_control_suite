@@ -1,4 +1,7 @@
+#include <math.h>
+
 #include "communication/subscriber.h"
+#include <iostream>
 
 
 Subscriber::Subscriber(CommsDataType dataType, std::string portId) : type(dataType), socket(ctx, zmq::socket_type::sub) {
@@ -7,6 +10,13 @@ Subscriber::Subscriber(CommsDataType dataType, std::string portId) : type(dataTy
     socket.connect(portId);
     socket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
     port = portId;
+    // values.push_back(0);
+    // values.push_back(-M_PI_4);
+    // values.push_back(0);
+    // values.push_back(-3 * M_PI_4);
+    // values.push_back(0);
+    // values.push_back(M_PI_2);
+    // values.push_back(M_PI_4);
     for(size_t i = 0; i < typeLengths[type]; i++)
         values.push_back(0.0);
 }
@@ -38,8 +48,13 @@ void Subscriber::readValues(std::vector<double>& output) {
     if(output.size() != values.size()) 
         output.resize(values.size());
 
-    for(size_t i = 0; i < values.size(); i++)
+    std::cout << "received commands: ";
+    for(size_t i = 0; i < values.size(); i++) {
         output[i] = values[i];
+        std::cout << output[i] << " ";
+    }
+    std::cout << std::endl;
+
 }
 
 void Subscriber::setDataType(CommsDataType dataType) {

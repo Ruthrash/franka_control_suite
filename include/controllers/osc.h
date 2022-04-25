@@ -24,7 +24,7 @@ public:
 
 private:
     // stiffness
-    const std::array<double, 6> k_s = {{60 / 2.5, 60 / 2.5, 60 / 2.5, 180 / 3, 180 / 3, 180 / 3}};
+    const std::array<double, 6> k_s = {{60 / 1.5, 60 / 1.5, 60 / 1.5, 180 / 3, 180 / 3, 180 / 3}};
     // damping gain
     const std::array<double, 6> k_d = {{8 / 1.4, 8 / 1.4, 8 / 1.4, 8 / 1, 8 / 1, 8 / 1}};
     // integral gain 

@@ -38,7 +38,7 @@ private:
     // count for receiving data
     size_t count;
     // pose delta
-    std::array<double, 6> deltaPose;
+    std::vector<double> deltaPose;
     // whether joints angles or ee pose should be sent
     bool jointMessage;
     // gripper command

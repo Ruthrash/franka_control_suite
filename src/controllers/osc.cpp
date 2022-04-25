@@ -13,7 +13,11 @@ Osc::Osc(int start, bool sendJoints, bool nullspace, bool coriolis) {
     count = start;
     jointMessage = sendJoints;
     jointMessage = true;
-    deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    // deltaPose = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    deltaPose.resize(6);
+    for(int i = 0; i < 6; i++) {
+        deltaPose[i] = 0;
+    }
     gripperCommand = -100.0;
 
     useNullspace = nullspace;

@@ -18,6 +18,15 @@ int main(int argc, char** argv) {
         robotContext::robot.control(motionGenerator);
         std::cout << "finished moving robot to default position" << std::endl;
 
+        /*
+        robotContext::robot.setCollisionBehavior(
+            {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{120.0, 120.0, 118.0, 118.0, 116.0, 114.0, 112.0}},
+            {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{120.0, 120.0, 118.0, 118.0, 116.0, 114.0, 112.0}},
+            {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{120.0, 120.0, 120.0, 125.0, 125.0, 125.0}},
+            {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{120.0, 120.0, 120.0, 125.0, 125.0, 125.0}}
+        );
+        */
+
         if(useOSC) {
             commsContext::subscriber.setDataType(CommsDataType::DELTA_POSE_NULL_POSE);
             Osc osc(1, true, false, false);

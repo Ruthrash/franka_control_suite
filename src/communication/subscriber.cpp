@@ -35,11 +35,11 @@ void Subscriber::readMessage() {
 
 void Subscriber::readValues(std::vector<double>& output) {
     std::lock_guard<std::mutex> guard(accessValuesMutex);
-    if(output.size != values.size) 
-        outputs.resize(values.size);
+    if(output.size() != values.size()) 
+        output.resize(values.size());
 
-    for(size_t i = 0; i < values.size; i++)
-        outputs[i] = values[i];
+    for(size_t i = 0; i < values.size(); i++)
+        output[i] = values[i];
 }
 
 void Subscriber::setDataType(CommsDataType dataType) {

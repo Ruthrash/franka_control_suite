@@ -31,17 +31,13 @@ public:
 
 private:
     // stiffness gain
-    // const std::array<double, DOF> k_s = {{600.0, 600.0, 600.0, 600.0, 250.0, 150.0, 50.0}};
-    const std::array<double, DOF> k_s = {{700.0, 700.0, 700.0, 700.0, 291.67, 175.0, 58.33}};
-    
+    const std::array<double, DOF> k_s = {{266.0, 266.0, 266.0, 266.0, 110.83, 68.5, 22.16}};
     // damping gain
-    const std::array<double, DOF> k_d = {{100.0, 100.0, 100.0, 100.0, 60.0, 50.0, 30.0}};
-    // const std::array<double, DOF> k_d = {{100.0, 100.0, 100.0, 100.0, 30.0, 25.0, 15.0}};
+    const std::array<double, DOF> k_d = {{40.0, 40.0, 40.0, 40.0, 24.0, 20.0, 12.0}};
     // integral gain
     const std::array<double, DOF> k_i = {{100.0, 100.0, 100.0, 200.0, 120.0, 100.0, 30.0}};
     // integral
     std::array<double, DOF> integral = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-    // const std::array<double, DOF> k_d = {{50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0}};
     // joint limits
     const std::array<double, DOF> joint_min = {{-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973}};
     const std::array<double, DOF> joint_max = {{2.8973, 1.7628 	, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973}};

@@ -32,11 +32,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         
         commsContext::publisher.writeMessage(jointBroadcast);
     }
-    // coriolis compensation
-    // if(count % 3 == 0) {
-        // commsContext::subscriber.readMessage();
-        // q_goal = commsContext::subscriber.values;
-    // }
+
     commsContext::subscriber.readValues(q_goal);
 
     count++;
@@ -62,9 +58,10 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
             integral[i] += period.toSec() * q_error;
             k_i_term = k_i[i];
         }
-        else
+        else {
             integral[i] = 0;
             k_i_term = 0;
+        }
 
         tau_d_calculated[i] = 2*0.1 * (
             1.9 * k_s[i] * (q_error) 

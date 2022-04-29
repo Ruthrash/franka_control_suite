@@ -43,7 +43,6 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
                 robotState.q[0], robotState.q[1], robotState.q[2], robotState.q[3],  
                 robotState.q[4], robotState.q[5], robotState.q[6]
             };
-            // std::cout << "sending message" << std::endl;
             commsContext::publisher.writeMessage(jointBroadcast);
         }
         else {
@@ -51,7 +50,6 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             Eigen::Vector3d position(transform.translation());      
             Eigen::Quaterniond orientation(transform.linear());
             std::vector<double> poseBroadcast(7);
-            // Eigen::Map<const Eigen::Vector3d>(poseBroadcast.data(), position.rows(), position.cols()) = position;
             poseBroadcast[0] = position(0);
             poseBroadcast[1] = position(1);
             poseBroadcast[2] = position(2);
@@ -62,16 +60,6 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
             commsContext::publisher.writeMessage(poseBroadcast);
         }
     }
-    // read command
-    // if(count % 3 == 0) {
-    //     commsContext::subscriber.readMessage();
-    //     for(size_t i = 0; i < 6; i++)
-    //         deltaPose[i] = commsContext::subscriber.values[i];
-    //     if(commsContext::subscriber.type == CommsDataType::DELTA_POSE_NULL_POSE) {
-    //         for(size_t i = 0; i < 7; i++)
-    //             restPose[i] = commsContext::subscriber.values[6+i];
-    //     }
-    // }
 
     commsContext::subscriber.readValues(deltaPose);
     count++;
@@ -189,18 +177,5 @@ franka::Torques Osc::operator()(const franka::RobotState& robotState,
     std::array<double, 7> tau_d_array{};
     Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
 
-    // std::cout << "Torque output: ";
-    // for(size_t i = 0; i < 7; i++) {
-    //     if(tau_d_array[i] > 0.9 * torqueMax[i])
-    //         tau_d_array[i] = 0.9 *  torqueMax[i];
-    //     std::cout << tau_d_array[i] << " ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << "Task wrench ";
-    // for(size_t i = 0; i < 6; i++)
-    //     std::cout << taskWrenchMotion[i] << " ";
-    // std::cout << std::endl;
-    
     return tau_d_array;
 }

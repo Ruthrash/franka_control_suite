@@ -63,9 +63,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
             k_i_term = 0;
         }
 
-        tau_d_calculated[i] = 2*0.1 * (
-            1.9 * k_s[i] * (q_error) 
-            - 2 * k_d[i] * robot_state.dq[i]); 
+        tau_d_calculated[i] = k_s[i] (q_error) - k_d[i] * robot_state.dq[i];
 
         // clamp torque
         if(tau_d_calculated[i] > 0.7 * torque_max[i])

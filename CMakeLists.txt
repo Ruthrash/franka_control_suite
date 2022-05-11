@@ -4,7 +4,8 @@ project(franka_control)
 # minimum C++ version
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Franka 0.7.0 REQUIRED)
+
+find_package(Franka REQUIRED)
 find_package(ZeroMQ QUIET)
 find_package(cppzmq REQUIRED)
 

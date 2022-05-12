@@ -28,6 +28,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     if((count-1)%3==0){
         std::vector<double> jointBroadcast = {
             robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6],
+            robot_state.dq[0], robot_state.dq[1], robot_state.dq[2], robot_state.dq[3], robot_state.dq[4], robot_state.dq[5], robot_state.dq[6],
         };
         
         commsContext::publisher.writeMessage(jointBroadcast);
@@ -53,9 +54,18 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
             q_goal[i] = joint_max[i];
 
         auto q_error = q_goal[i] - robot_state.q[i];
-        
+	auto q_dot_error = q_goal[i+DOF] - robot_state.dq[i];
+	double acceleration = (robot_state.dq[i] - prevVel[i]) / DT;
+	std::cout << "acceleration " << acceleration << std::endl;
+	std::cout << "period: " << DT << std::endl;
+	prevVel[i] = robot_state.dq[i];
+
+	// reset integral term if sign changes
+        if(integral[i] * (integral[i] + DT * q_dot_error) < 0)
+	    integral[i] = 0;
+	// only add if error is within range
         if(q_error <= 0.05) {
-            integral[i] += period.toSec() * q_error;
+            integral[i] += DT * q_dot_error;
             k_i_term = k_i[i];
         }
         else {
@@ -63,7 +73,23 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
             k_i_term = 0;
         }
 
-        tau_d_calculated[i] = k_s[i] * (q_error) - k_d[i] * robot_state.dq[i];
+        float derror;
+        if (error_initialised) {
+            derror = (q_error - last_error[i]) / DT;
+        } else {
+            derror = 0.0;
+            error_initialised = true;
+        }
+        last_error[i] = q_error;
+
+        std::cout << derror << std::endl;
+
+        tau_d_calculated[i] = 
+            1.5 * k_s[i] * (q_error)
+            + 0.3 * k_d[i] * (q_goal[i+DOF] - robot_state.dq[i])
+            - 0.0 * velDamping[i] * acceleration
+            - 0.00 * k_dError[i] * derror;
+            // - 0.1 * k_dError[i] * derror;
 
         // clamp torque
         if(tau_d_calculated[i] > 0.7 * torque_max[i])

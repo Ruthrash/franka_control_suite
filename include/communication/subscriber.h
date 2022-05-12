@@ -9,6 +9,7 @@
 
 enum class CommsDataType {
     JOINT_ANGLES,
+    JOINT_ANGLES_VEL,
     DELTA_POSE,
     DELTA_POSE_NULL_POSE,
     POSE,
@@ -19,6 +20,7 @@ enum class CommsDataType {
 
 inline std::map<CommsDataType, int> typeLengths = {
     {CommsDataType::JOINT_ANGLES, 7},
+    {CommsDataType::JOINT_ANGLES_VEL, 7 + 7},
     {CommsDataType::DELTA_POSE, 6},
     {CommsDataType::DELTA_POSE_NULL_POSE, 6 + 7},
     {CommsDataType::POSE, 6},

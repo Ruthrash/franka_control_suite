@@ -11,7 +11,7 @@
 
 int main(int argc, char** argv) {
     try {
-        std::string controlMode = "velCtrl";
+        std::string controlMode = "posCtrl";
         // bool useOSC = false;
 
         std::cout << "moving robot to default position..." << std::endl;
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
             }
         }
         else if(controlMode == "posCtrl") {
-            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES);
+            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL);
             TorqueGenerator torqueController(1, false);
             commsContext::subscriber.values[0] = 0;
             commsContext::subscriber.values[1] = -M_PI_4;

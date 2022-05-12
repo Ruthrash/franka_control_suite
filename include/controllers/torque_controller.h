@@ -15,6 +15,7 @@
 #include <memory>
 
 #define DOF 7 
+#define DT 0.001
 
 
 class TorqueGenerator {
@@ -35,9 +36,20 @@ private:
     // damping gain
     const std::array<double, DOF> k_d = {{40.0, 40.0, 40.0, 40.0, 24.0, 20.0, 12.0}};
     // integral gain
-    const std::array<double, DOF> k_i = {{100.0, 100.0, 100.0, 200.0, 120.0, 100.0, 30.0}};
+    const std::array<double, DOF> k_i = {{100.0 / 100, 100.0 / 100, 100.0 / 100, 200.0 / 100, 120.0 / 100, 100.0 / 100, 30.0 / 100}};
     // integral
     std::array<double, DOF> integral = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+    // acceleration damping
+    const std::array<double, DOF> velDamping = {{40.0, 40.0, 40.0, 40.0, 24.0, 20.0, 12.0}};
+    // acceleration 
+    std::array<double, DOF> prevVel = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+
+    // derror gains
+    std::array<double, DOF> k_dError = {{20.0, 20.0, 20.0, 20.0, 10.0, 6.0, 2.0}};
+    // keep track of derror calculation
+    bool error_initialised = false;
+    std::array<double, DOF> last_error = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+
     // joint limits
     const std::array<double, DOF> joint_min = {{-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973}};
     const std::array<double, DOF> joint_max = {{2.8973, 1.7628 	, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973}};

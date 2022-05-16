@@ -12,6 +12,9 @@
 #include <franka/model.h>
 #include <franka/robot_state.h>
 
+#include "interpolator/interpolator.h"
+#include "interpolator/min_jerk_interpolator.h"
+
 #include <memory>
 
 #define DOF 7 
@@ -24,8 +27,7 @@ public:
     TorqueGenerator(int start, bool useGripper);
     TorqueGenerator(const std::vector<double>& q_goal);
     // desired joint configuration
-    std::vector<double> q_goal;
-    // count for receiving data 
+    std::vector<double> q_goal; // count for receiving data 
     size_t count;
     
     franka::Torques operator()(const franka::RobotState& robot_state, franka::Duration period);
@@ -57,6 +59,15 @@ private:
     const std::array<double, DOF> torque_max = {{87, 87, 87, 87, 12, 12, 12}};
     // calculated torque output
     std::array<double, DOF> torque_output = {{0, 0, 0, 0, 0, 0, 0}};
+
+    QuinticInterpolator interpolator;
+    MinJerkInterpolator min_jerk_interpolator;
+
+    std::vector<double> interPos;
+    std::vector<double> interVel = {0, 0, 0, 0, 0, 0, 0};
+    std::vector<double> interAccel = {0, 0, 0, 0, 0, 0, 0};
+
+    bool waitingForCommand = true;
 
     bool useGripper;
 };

@@ -15,18 +15,21 @@
 
 
 TorqueGenerator::TorqueGenerator(int start, bool useGripper) : 
-    useGripper(useGripper), interpolator(0.001), min_jerk_interpolator(0.001, 1 / 60) {
+    useGripper(useGripper), interpolator(0.001), min_jerk_interpolator(0.001, 1. / 120.) {
     count = start;
     q_goal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4, 0.04, 0.04}; 
     for(size_t i = 0; i < 7; i++)
         interPos.push_back(q_goal[i]);
     interpolator.setInterpolationTimeWindow(1 / 60.);
+
+    if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER)
+        useGripper = true;
 }
 
 TorqueGenerator::TorqueGenerator(const std::vector<double>& q_goal) : 
     q_goal(q_goal), interpolator(0.001), min_jerk_interpolator(0.001, 1 / 60) {
     count = 1;
-    interpolator.setInterpolationTimeWindow(1 / 60.);
+    interpolator.setInterpolationTimeWindow(1 / 120);
 }
 
 franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_state,
@@ -39,7 +42,9 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         
         commsContext::publisher.writeMessage(jointBroadcast);
     }
-    if(count % 16 == 0) {
+
+    // quintic interpolator: interpolation window: 1/120, count % 8
+    if(count % 8 == 0) {
         commsContext::subscriber.readValues(q_goal);
         Eigen::VectorXd start_position(7);
         Eigen::VectorXd end_position(7);
@@ -52,7 +57,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         end_velocity << q_goal[7], q_goal[8], q_goal[9], q_goal[10], q_goal[11], q_goal[12], q_goal[13];
        
         interpolator.setTargetEndpoints(start_position, end_position, start_velocity, end_velocity);
-        min_jerk_interpolator.setTargetEndpoints(start_position, end_position);
+        // min_jerk_interpolator.setTargetEndpoints(start_position, end_position);
         waitingForCommand = false;
     }
     std::cout << interPos.size() << " " << interVel.size() << " " << interAccel.size() << std::endl;
@@ -106,12 +111,14 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         last_error[i] = q_error;
 
         std::cout << derror << std::endl;
+        std::cout << q_error << std::endl;
+        std::cout << q_dot_error << std::endl;
 
         tau_d_calculated[i] = 
             1.5 * k_s[i] * (q_error)
             + 0.3 * k_d[i] * q_dot_error
-            - 0.0 * velDamping[i] * acceleration
-            - 0.00 * k_dError[i] * derror;
+            - 0.0 * velDamping[i] * acceleration;
+            // - 0.00 * k_dError[i] * derror;
             // - 0.1 * k_dError[i] * derror;
 
         // clamp torque

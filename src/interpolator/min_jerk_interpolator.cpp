@@ -1,13 +1,16 @@
 #include "interpolator/min_jerk_interpolator.h"
+#include <iostream>
 
 
 MinJerkInterpolator::MinJerkInterpolator(double dt, double duration) 
-    : dt_(dt), duration_(duration) {};
+    : dt_(dt), duration_(duration) {std::cout << "IN CONSTRUCTOR " << duration << std::endl;};
 
 void MinJerkInterpolator::setTargetEndpoints(
         Eigen::VectorXd start,
         Eigen::VectorXd end
 ) {
+    start_.setZero(7);
+    end_.setZero(7);
     for(int i = 0; i < 7; i++) {
         start_[i] = start[i];
         end_[i] = end[i];
@@ -25,6 +28,7 @@ void MinJerkInterpolator::step(
             15 * pow(t_ / duration_, 4) + 
             6 * pow(t_ / duration_, 5)
         );
+        std::cout << "in interpolator " << t_ << " " << duration_ << std::endl;
 
         interpDot[i] = 1 / duration_ * (end_[i] - start_[i]) * (
             30 * pow(t_ / duration_, 2) - 

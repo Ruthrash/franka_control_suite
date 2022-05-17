@@ -16,6 +16,8 @@
 #include "interpolator/min_jerk_interpolator.h"
 
 #include <memory>
+#include <thread>
+#include <mutex>
 
 #define DOF 7 
 #define DT 0.001

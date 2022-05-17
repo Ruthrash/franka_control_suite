@@ -35,7 +35,6 @@ class Subscriber {
 private:
     std::mutex accessValuesMutex;
 
-
 public:
     CommsDataType type;
 
@@ -43,6 +42,7 @@ public:
     Subscriber(const Subscriber& Subscriber);
     void readMessage();
     void readValues(std::vector<double>& output);
+    double readGripperCommands();
     void setDataType(CommsDataType dataType);
 
     std::vector<double> values;

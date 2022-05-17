@@ -71,5 +71,10 @@ private:
 
     bool waitingForCommand = true;
 
-    bool useGripper;
+    bool useGripper = false;
+
+    std::thread* gripperThread;
+    double gripperWidth = 0;
+
+    void gripperThreadProc();
 };

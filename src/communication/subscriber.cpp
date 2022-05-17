@@ -63,3 +63,11 @@ void Subscriber::setDataType(CommsDataType dataType) {
     for(size_t i = 0; i < typeLengths[type]; i++)
         values[i] = 0.0;
 }
+
+double Subscriber::readGripperCommands() {
+    std::lock_guard<std::mutex> guard(accessValuesMutex);
+    double finger1 = values.end()[-2];
+    double finger2 = values.end()[-1];
+
+    return finger1 + finger2;
+}

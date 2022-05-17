@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <chrono>
+#include <cmath>
 
 #include <franka/exception.h>
 #include <franka/robot.h>
@@ -22,8 +23,10 @@ TorqueGenerator::TorqueGenerator(int start, bool useGripper) :
         interPos.push_back(q_goal[i]);
     interpolator.setInterpolationTimeWindow(1 / 60.);
 
-    if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER)
+    if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER) {
         useGripper = true;
+        gripperThread = new std::thread(&TorqueGenerator::gripperThreadProc, this);
+    }
 }
 
 TorqueGenerator::TorqueGenerator(const std::vector<double>& q_goal) : 
@@ -133,4 +136,17 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     franka::Torques output(tau_d_rate_limited);
 
     return output;
+}
+
+void TorqueGenerator::gripperThreadProc() {
+    while(useGripper) {
+        double width = commsContext::subscriber.readGripperCommands();
+        franka::GripperState gripperState = robotContext::gripper.readOnce();
+        if(std::abs(width - gripperWidth) >= 0.05) {
+            if(width >= gripperState.max_width)
+                width = gripperState.max_width;
+            
+            robotContext::gripper.grasp(width, 0.1, 60);
+        }
+    }
 }

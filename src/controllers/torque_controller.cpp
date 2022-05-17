@@ -115,9 +115,9 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         std::cout << q_dot_error << std::endl;
 
         tau_d_calculated[i] = 
-            1.5 * k_s[i] * (q_error)
-            + 0.3 * k_d[i] * q_dot_error
-            - 0.0 * velDamping[i] * acceleration;
+            3 * k_s[i] * (q_error)
+            + 0.6 * k_d[i] * q_dot_error
+            - 0.02 * velDamping[i] * acceleration;
             // - 0.00 * k_dError[i] * derror;
             // - 0.1 * k_dError[i] * derror;
 

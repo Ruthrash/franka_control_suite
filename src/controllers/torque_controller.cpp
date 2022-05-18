@@ -24,7 +24,9 @@ TorqueGenerator::TorqueGenerator(int start, bool useGripper) :
     interpolator.setInterpolationTimeWindow(1 / 60.);
 
     if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER) {
-        useGripper = true;
+        useGripper = false;
+        franka::GripperState gripperState = robotContext::gripper.readOnce();
+        maxWidth = gripperState.max_width;
         gripperThread = new std::thread(&TorqueGenerator::gripperThreadProc, this);
     }
 }
@@ -46,6 +48,16 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         commsContext::publisher.writeMessage(jointBroadcast);
     }
 
+    // gripper stuff
+    // double width = commsContext::subscriber.readGripperCommands();
+    // franka::GripperState gripper_state = robotContext::gripper.readOnce();
+    // if(std::abs(width - gripperWidth) >= 0.001) {
+    //     gripperWidth = width;
+    //     if(gripper_state.is_grasped)
+    //         robotContext::gripper.stop();
+    // }
+
+
     // quintic interpolator: interpolation window: 1/120, count % 8
     if(count % 8 == 0) {
         commsContext::subscriber.readValues(q_goal);
@@ -63,7 +75,6 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         // min_jerk_interpolator.setTargetEndpoints(start_position, end_position);
         waitingForCommand = false;
     }
-    std::cout << interPos.size() << " " << interVel.size() << " " << interAccel.size() << std::endl;
     if(!waitingForCommand) {
         interpolator.step(interPos, interVel, interAccel);
         // min_jerk_interpolator.step(interPos, interVel);
@@ -88,8 +99,6 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     auto q_error = interPos[i] - robot_state.q[i];
 	auto q_dot_error = interVel[i] - robot_state.dq[i];
 	double acceleration = (robot_state.dq[i] - prevVel[i]) / DT;
-	std::cout << "acceleration " << acceleration << std::endl;
-	std::cout << "period: " << DT << std::endl;
 	prevVel[i] = robot_state.dq[i];
 	// reset integral term if sign changes
         if(integral[i] * (integral[i] + DT * q_dot_error) < 0)
@@ -113,9 +122,9 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         }
         last_error[i] = q_error;
 
-        std::cout << derror << std::endl;
-        std::cout << q_error << std::endl;
-        std::cout << q_dot_error << std::endl;
+        // std::cout << derror << std::endl;
+        // std::cout << q_error << std::endl;
+        // std::cout << q_dot_error << std::endl;
 
         tau_d_calculated[i] = 
             3 * k_s[i] * (q_error)
@@ -130,6 +139,7 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     }
 
 
+
     std::array<double, DOF> tau_d_rate_limited =
           franka::limitRate(franka::kMaxTorqueRate, tau_d_calculated, robot_state.tau_J_d);
 
@@ -141,12 +151,19 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
 void TorqueGenerator::gripperThreadProc() {
     while(useGripper) {
         double width = commsContext::subscriber.readGripperCommands();
-        franka::GripperState gripperState = robotContext::gripper.readOnce();
-        if(std::abs(width - gripperWidth) >= 0.05) {
-            if(width >= gripperState.max_width)
-                width = gripperState.max_width;
-            
-            robotContext::gripper.grasp(width, 0.1, 60);
+        franka::GripperState gripper_state = robotContext::gripper.readOnce();
+        if(width >= maxWidth)
+            width = maxWidth;
+        if(std::abs(width - gripperWidth) >= 0.001) {
+            gripperWidth = width;
+            if(width > 0.005)
+                robotContext::gripper.move(gripperWidth, 0.2);
+            else {
+                if(!robotContext::gripper.grasp(0.04, 0.1, 60)) {
+                    std::cout << "FAILED GRASP!" << std::endl;
+                }
+            }
         }
-    }
+
+    } 
 }

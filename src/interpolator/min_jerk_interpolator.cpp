@@ -3,7 +3,7 @@
 
 
 MinJerkInterpolator::MinJerkInterpolator(double dt, double duration) 
-    : dt_(dt), duration_(duration) {std::cout << "IN CONSTRUCTOR " << duration << std::endl;};
+    : dt_(dt), duration_(duration) {};
 
 void MinJerkInterpolator::setTargetEndpoints(
         Eigen::VectorXd start,

@@ -75,6 +75,7 @@ private:
 
     std::thread* gripperThread;
     double gripperWidth = 0;
+    double maxWidth = 0;
 
     void gripperThreadProc();
 };

@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
         }
         else if(controlMode == "posCtrl") {
             commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL_GRIPPER);
-            TorqueGenerator torqueController(1, false);
+            TorqueGenerator torqueController(1, true);
             commsContext::subscriber.values[0] = 0;
             commsContext::subscriber.values[1] = -M_PI_4;
             commsContext::subscriber.values[2] = 0;

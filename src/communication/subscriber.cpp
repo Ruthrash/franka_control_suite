@@ -48,12 +48,12 @@ void Subscriber::readValues(std::vector<double>& output) {
     if(output.size() != values.size()) 
         output.resize(values.size());
 
-    std::cout << "received commands: ";
+    // std::cout << "received commands: ";
     for(size_t i = 0; i < values.size(); i++) {
         output[i] = values[i];
-        std::cout << output[i] << " ";
+        // std::cout << output[i] << " ";
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
 
 }
 
@@ -68,6 +68,8 @@ double Subscriber::readGripperCommands() {
     std::lock_guard<std::mutex> guard(accessValuesMutex);
     double finger1 = values.end()[-2];
     double finger2 = values.end()[-1];
+
+    // std::cout << "finger 1: " << finger1 << " finger 2: " << finger2 << std::endl;
 
     return finger1 + finger2;
 }

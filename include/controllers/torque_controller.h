@@ -38,13 +38,13 @@ private:
     // stiffness gain
     const std::array<double, DOF> k_s = {{266.0, 266.0, 266.0, 266.0, 110.83, 68.5, 22.16}};
     // damping gain
-    const std::array<double, DOF> k_d = {{40.0, 40.0, 40.0, 40.0, 24.0, 20.0, 12.0}};
+    const std::array<double, DOF> k_d = {{40.0, 80.0, 65.0, 50.0, 24.0, 20.0, 12.0}};
     // integral gain
     const std::array<double, DOF> k_i = {{100.0 / 100, 100.0 / 100, 100.0 / 100, 200.0 / 100, 120.0 / 100, 100.0 / 100, 30.0 / 100}};
     // integral
     std::array<double, DOF> integral = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
     // acceleration damping
-    const std::array<double, DOF> velDamping = {{40.0, 40.0, 40.0, 40.0, 24.0, 20.0, 12.0}};
+    const std::array<double, DOF> velDamping = {{20.0, 20.0, 20.0, 15.0, 24.0, 20.0, 12.0}};
     // acceleration 
     std::array<double, DOF> prevVel = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
 

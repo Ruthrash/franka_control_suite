@@ -24,7 +24,7 @@ TorqueGenerator::TorqueGenerator(int start, bool useGripper) :
     interpolator.setInterpolationTimeWindow(1 / 60.);
 
     if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER) {
-        useGripper = false;
+        useGripper = true;
         franka::GripperState gripperState = robotContext::gripper.readOnce();
         maxWidth = gripperState.max_width;
         gripperThread = new std::thread(&TorqueGenerator::gripperThreadProc, this);
@@ -48,17 +48,6 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         commsContext::publisher.writeMessage(jointBroadcast);
     }
 
-    // gripper stuff
-    // double width = commsContext::subscriber.readGripperCommands();
-    // franka::GripperState gripper_state = robotContext::gripper.readOnce();
-    // if(std::abs(width - gripperWidth) >= 0.001) {
-    //     gripperWidth = width;
-    //     if(gripper_state.is_grasped)
-    //         robotContext::gripper.stop();
-    // }
-
-
-    // quintic interpolator: interpolation window: 1/120, count % 8
     if(count % 8 == 0) {
         commsContext::subscriber.readValues(q_goal);
         Eigen::VectorXd start_position(7);
@@ -72,12 +61,10 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         end_velocity << q_goal[7], q_goal[8], q_goal[9], q_goal[10], q_goal[11], q_goal[12], q_goal[13];
        
         interpolator.setTargetEndpoints(start_position, end_position, start_velocity, end_velocity);
-        // min_jerk_interpolator.setTargetEndpoints(start_position, end_position);
         waitingForCommand = false;
     }
     if(!waitingForCommand) {
         interpolator.step(interPos, interVel, interAccel);
-        // min_jerk_interpolator.step(interPos, interVel);
     }
 
     count++;
@@ -89,58 +76,30 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
     auto mass = robotContext::model.mass(robot_state);
     std::array<double, DOF> tau_d_calculated;
 
-    double k_i_term = 0;
     for (size_t i = 0; i < DOF; i++) {
         // clamp goal joint position
         if(q_goal[i] < joint_min[i])
             q_goal[i] = joint_min[i];
         else if(q_goal[i] > joint_max[i])
             q_goal[i] = joint_max[i];
+
     auto q_error = interPos[i] - robot_state.q[i];
 	auto q_dot_error = interVel[i] - robot_state.dq[i];
 	double acceleration = (robot_state.dq[i] - prevVel[i]) / DT;
 	prevVel[i] = robot_state.dq[i];
-	// reset integral term if sign changes
-        if(integral[i] * (integral[i] + DT * q_dot_error) < 0)
-	    integral[i] = 0;
-	// only add if error is within range
-        if(q_error <= 0.05) {
-            integral[i] += DT * q_dot_error;
-            k_i_term = k_i[i];
-        }
-        else {
-            integral[i] = 0;
-            k_i_term = 0;
-        }
+    
+    // calculate torque
+    tau_d_calculated[i] = 
+        propGains[i] * (q_error)
+        + derivGains[i] * q_dot_error
+        - velDamping[i] * acceleration;
 
-        float derror;
-        if (error_initialised) {
-            derror = (q_error - last_error[i]) / DT;
-        } else {
-            derror = 0.0;
-            error_initialised = true;
-        }
-        last_error[i] = q_error;
-
-        // std::cout << derror << std::endl;
-        // std::cout << q_error << std::endl;
-        // std::cout << q_dot_error << std::endl;
-
-        tau_d_calculated[i] = 
-            3 * k_s[i] * (q_error)
-            + 0.75 * k_d[i] * q_dot_error
-            - 0.03 * velDamping[i] * acceleration;
-            // - 0.00 * k_dError[i] * derror;
-            // - 0.1 * k_dError[i] * derror;
-
-        // clamp torque
-        if(tau_d_calculated[i] > 0.8 * torque_max[i])
-            tau_d_calculated[i] = 0.8 *  torque_max[i];
-        else if(tau_d_calculated[i] < -0.8 * torque_max[i])
-            tau_d_calculated[i] = -0.8 *  torque_max[i];
+    // clamp torque
+    if(tau_d_calculated[i] > 0.8 * torque_max[i])
+        tau_d_calculated[i] = 0.8 *  torque_max[i];
+    else if(tau_d_calculated[i] < -0.8 * torque_max[i])
+        tau_d_calculated[i] = -0.8 *  torque_max[i];
     }
-
-
 
     std::array<double, DOF> tau_d_rate_limited =
           franka::limitRate(franka::kMaxTorqueRate, tau_d_calculated, robot_state.tau_J_d);

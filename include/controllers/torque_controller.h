@@ -36,24 +36,13 @@ public:
 
 private:
     // stiffness gain
-    const std::array<double, DOF> k_s = {{266.0, 266.0, 266.0, 266.0, 110.83, 68.5, 22.16}};
+    const std::array<double, DOF> propGains = {{800.0, 800.0, 800.0, 800.0, 330, 205, 65}};
     // damping gain
-    const std::array<double, DOF> k_d = {{40.0, 80.0, 65.0, 50.0, 24.0, 20.0, 12.0}};
-    // integral gain
-    const std::array<double, DOF> k_i = {{100.0 / 100, 100.0 / 100, 100.0 / 100, 200.0 / 100, 120.0 / 100, 100.0 / 100, 30.0 / 100}};
-    // integral
-    std::array<double, DOF> integral = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+    const std::array<double, DOF> derivGains = {{30.0, 60.0, 50.0, 35.0, 20.0, 15.0, 10.0}};
     // acceleration damping
-    const std::array<double, DOF> velDamping = {{20.0, 20.0, 20.0, 15.0, 24.0, 20.0, 12.0}};
+    const std::array<double, DOF> velDamping = {{0.6, 0.6, 0.6, 0.45, 0.72, 0.6, 0.36}};
     // acceleration 
     std::array<double, DOF> prevVel = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-
-    // derror gains
-    std::array<double, DOF> k_dError = {{20.0, 20.0, 20.0, 20.0, 10.0, 6.0, 2.0}};
-    // keep track of derror calculation
-    bool error_initialised = false;
-    std::array<double, DOF> last_error = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-
     // joint limits
     const std::array<double, DOF> joint_min = {{-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973}};
     const std::array<double, DOF> joint_max = {{2.8973, 1.7628 	, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973}};

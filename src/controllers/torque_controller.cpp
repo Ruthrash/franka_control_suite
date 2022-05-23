@@ -12,7 +12,7 @@
 
 #include "controllers/torque_controller.h"
 #include "context/context.h"
-
+#include "pinocchio/algorithm/rnea.hpp"
 
 
 TorqueGenerator::TorqueGenerator(int start, bool useGripper) : 

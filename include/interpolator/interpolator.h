@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 // This class calculates the coefficients of a quintic polynomial
 // in order to smoothly interpolate between two points with constraints

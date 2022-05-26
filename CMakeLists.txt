@@ -17,8 +17,6 @@ link_directories(${Franka_INCLUDE_DIRS})
 link_directories(${pinocchio_LIBRARY_DIRS})
 
 # link libraries 
-message("wafwafawfawfwafwa")
-message(${PROJECT_SOURCE_DIR})
 SET(PINOCCHIO_MODEL_DIR "${PROJECT_SOURCE_DIR}/models")
 
 # define source files

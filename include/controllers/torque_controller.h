@@ -15,12 +15,22 @@
 #include "interpolator/interpolator.h"
 #include "interpolator/min_jerk_interpolator.h"
 
+#include "pinocchio/parsers/urdf.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include "pinocchio/algorithm/kinematics.hpp"
+#include "pinocchio/algorithm/rnea.hpp"
+#include "pinocchio/multibody/model.hpp"
+
 #include <memory>
 #include <thread>
 #include <mutex>
 
 #define DOF 7 
 #define DT 0.001
+
+#ifndef PINOCCHIO_MODEL_DIR
+  #define PINOCCHIO_MODEL_DIR "/home/snl/franka_dev/franka_control_suite/models/"
+#endif
 
 
 class TorqueGenerator {
@@ -67,4 +77,10 @@ private:
     double maxWidth = 0;
 
     void gripperThreadProc();
+
+    std::string urdf_filename = PINOCCHIO_MODEL_DIR + std::string("franka_allegro.urdf");
+    pinocchio::Model modelPin;
+    pinocchio::Data data;
+    Eigen::VectorXd pinGrav;
+
 };

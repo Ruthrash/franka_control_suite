@@ -3,7 +3,7 @@
 
 namespace robotContext {
     franka::Robot robot("172.16.0.2");
-    franka::Gripper gripper("172.16.0.2");
+    // franka::Gripper gripper("172.16.0.2");
     franka::Model model = robot.loadModel();
 }
 

@@ -8,3 +8,5 @@ cmake -DFranka_DIR=/home/snl/libfranka/build ..
 
 make
 
+cd -
+

@@ -10,7 +10,7 @@
 
 namespace robotContext {
     extern franka::Robot robot;
-    extern franka::Gripper gripper;
+    // extern franka::Gripper gripper;
     extern franka::Model model;
 }
 

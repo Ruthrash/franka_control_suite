@@ -14,9 +14,16 @@
 #include "context/context.h"
 #include "pinocchio/algorithm/rnea.hpp"
 
+using namespace std::chrono;
+
 
 TorqueGenerator::TorqueGenerator(int start, bool useGripper) : 
-    useGripper(useGripper), interpolator(0.001), min_jerk_interpolator(0.001, 1. / 120.) {
+    useGripper(useGripper), interpolator(0.001), min_jerk_interpolator(0.001, 1. / 120.),
+    pinGrav(7) {
+    // modelPin(pinocchio::urdf::buildModel(urdf_filename, modelPin)), 
+    // data(modelPin) {
+    pinocchio::urdf::buildModel(urdf_filename, modelPin);
+    data = pinocchio::Data(modelPin);
     count = start;
     q_goal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4, 0.04, 0.04}; 
     for(size_t i = 0; i < 7; i++)
@@ -25,8 +32,8 @@ TorqueGenerator::TorqueGenerator(int start, bool useGripper) :
 
     if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER) {
         useGripper = true;
-        franka::GripperState gripperState = robotContext::gripper.readOnce();
-        maxWidth = gripperState.max_width;
+        // franka::GripperState gripperState = robotContext::gripper.readOnce();
+        // maxWidth = gripperState.max_width;
         gripperThread = new std::thread(&TorqueGenerator::gripperThreadProc, this);
     }
 }
@@ -88,11 +95,31 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
 	double acceleration = (robot_state.dq[i] - prevVel[i]) / DT;
 	prevVel[i] = robot_state.dq[i];
     
+    if((count-1) % 1000 == 0) {
+        
+        Eigen::VectorXd q(7+16);
+        q << robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6],
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        Eigen::VectorXd v = Eigen::VectorXd::Zero(modelPin.nv);
+        Eigen::VectorXd a = Eigen::VectorXd::Zero(modelPin.nv);
+        // auto start = high_resolution_clock::now();
+        pinGrav = pinocchio::rnea(modelPin, data, q, v, a);
+        // auto stop = high_resolution_clock::now();
+        // auto duration = duration_cast<microseconds>(stop - start);
+        // std::cout << duration.count() << std::endl;
+    }
+    std::cout << pinGrav[0] << pinGrav[1] << pinGrav[2] << pinGrav[3] << pinGrav[4] << pinGrav[5] << pinGrav[6] << std::endl;
+    std::cout << gravity[0] << gravity[1] << gravity[2] << gravity[3] << gravity[4] << gravity[5] << gravity[6] << std::endl;
+
+    
     // calculate torque
     tau_d_calculated[i] = 
         propGains[i] * (q_error)
-        + derivGains[i] * q_dot_error
-        - velDamping[i] * acceleration;
+        + 0.3*derivGains[i] * q_dot_error
+        - 0.1*velDamping[i] * acceleration;
+        // - gravity[i] + pinGrav(i);
+    
+    
 
     // clamp torque
     if(tau_d_calculated[i] > 0.8 * torque_max[i])
@@ -111,20 +138,20 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
 
 void TorqueGenerator::gripperThreadProc() {
     while(useGripper) {
-        double width = commsContext::subscriber.readGripperCommands();
-        franka::GripperState gripper_state = robotContext::gripper.readOnce();
-        if(width >= maxWidth)
-            width = maxWidth;
-        if(std::abs(width - gripperWidth) >= 0.001) {
-            gripperWidth = width;
-            if(width > 0.005)
-                robotContext::gripper.move(gripperWidth, 0.2);
-            else {
-                if(!robotContext::gripper.grasp(0.04, 0.1, 60)) {
-                    std::cout << "FAILED GRASP!" << std::endl;
-                }
-            }
-        }
+        // double width = commsContext::subscriber.readGripperCommands();
+        // franka::GripperState gripper_state = robotContext::gripper.readOnce();
+        // if(width >= maxWidth)
+        //     width = maxWidth;
+        // if(std::abs(width - gripperWidth) >= 0.001) {
+        //     gripperWidth = width;
+        //     if(width > 0.005)
+        //         robotContext::gripper.move(gripperWidth, 0.2);
+        //     else {
+        //         if(!robotContext::gripper.grasp(0.04, 0.1, 60)) {
+        //             std::cout << "FAILED GRASP!" << std::endl;
+        //         }
+        //     }
+        // }
 
     } 
 }

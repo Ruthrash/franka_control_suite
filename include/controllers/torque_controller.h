@@ -83,4 +83,7 @@ private:
     pinocchio::Data data;
     Eigen::VectorXd pinGrav;
 
+    std::mutex* gripperStateMutex;
+    double publishedWidth = 0;
+
 };

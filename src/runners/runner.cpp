@@ -18,6 +18,11 @@ int main(int argc, char** argv) {
         std::array<double, 7> qRest = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
         MotionGenerator motionGenerator(0.5, qRest);
         robotContext::robot.control(motionGenerator);
+
+        franka::GripperState gripperState = robotContext::gripper.readOnce();
+        double maxWidth = gripperState.max_width;
+        robotContext::gripper.move(maxWidth, 0.2);
+
         std::cout << "finished moving robot to default position" << std::endl;
 
         // robotContext::robot.setCollisionBehavior(
@@ -42,7 +47,8 @@ int main(int argc, char** argv) {
             }
         }
         else if(controlMode == "posCtrl") {
-            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL);
+            // commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL);
+            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL_GRIPPER);
             std::cout << "before initialization" << std::endl;
             TorqueGenerator torqueController(1, true);
             std::cout << "before assignment" << std::endl;

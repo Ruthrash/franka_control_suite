@@ -31,9 +31,11 @@ TorqueGenerator::TorqueGenerator(int start, bool useGripper) :
     interpolator.setInterpolationTimeWindow(1 / 60.);
 
     if(commsContext::subscriber.type == CommsDataType::JOINT_ANGLES_VEL_GRIPPER) {
+        gripperStateMutex = new std::mutex();
         useGripper = true;
-        // franka::GripperState gripperState = robotContext::gripper.readOnce();
-        // maxWidth = gripperState.max_width;
+        franka::GripperState gripperState = robotContext::gripper.readOnce();
+        maxWidth = gripperState.max_width;
+        publishedWidth = gripperState.width;
         gripperThread = new std::thread(&TorqueGenerator::gripperThreadProc, this);
     }
 }
@@ -47,10 +49,16 @@ TorqueGenerator::TorqueGenerator(const std::vector<double>& q_goal) :
 franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_state,
                                                    franka::Duration period) {
     if((count-1)%3==0){
+        gripperStateMutex->lock();
+        double gripperFinger = publishedWidth / 2;
+        gripperStateMutex->unlock();
+
         std::vector<double> jointBroadcast = {
             robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3], robot_state.q[4], robot_state.q[5], robot_state.q[6],
-            robot_state.dq[0], robot_state.dq[1], robot_state.dq[2], robot_state.dq[3], robot_state.dq[4], robot_state.dq[5], robot_state.dq[6],
+            robot_state.dq[0], robot_state.dq[1], robot_state.dq[2], robot_state.dq[3], robot_state.dq[4], robot_state.dq[5], robot_state.dq[6]
         };
+
+
         
         commsContext::publisher.writeMessage(jointBroadcast);
     }
@@ -108,16 +116,21 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
         // auto duration = duration_cast<microseconds>(stop - start);
         // std::cout << duration.count() << std::endl;
     }
-    std::cout << pinGrav[0] << pinGrav[1] << pinGrav[2] << pinGrav[3] << pinGrav[4] << pinGrav[5] << pinGrav[6] << std::endl;
-    std::cout << gravity[0] << gravity[1] << gravity[2] << gravity[3] << gravity[4] << gravity[5] << gravity[6] << std::endl;
 
     
     // calculate torque
+    // allegro
+    // tau_d_calculated[i] = 
+    //     propGains[i] * (q_error)
+    //     + 0.3*derivGains[i] * q_dot_error
+    //     - 0.1*velDamping[i] * acceleration;
+    //     // - gravity[i] + pinGrav(i);
+
+    // gripper
     tau_d_calculated[i] = 
         propGains[i] * (q_error)
-        + 0.3*derivGains[i] * q_dot_error
-        - 0.1*velDamping[i] * acceleration;
-        // - gravity[i] + pinGrav(i);
+        + derivGains[i] * q_dot_error
+        - velDamping[i] * acceleration;
     
     
 
@@ -138,20 +151,29 @@ franka::Torques TorqueGenerator::operator()(const franka::RobotState& robot_stat
 
 void TorqueGenerator::gripperThreadProc() {
     while(useGripper) {
-        // double width = commsContext::subscriber.readGripperCommands();
-        // franka::GripperState gripper_state = robotContext::gripper.readOnce();
-        // if(width >= maxWidth)
-        //     width = maxWidth;
-        // if(std::abs(width - gripperWidth) >= 0.001) {
-        //     gripperWidth = width;
-        //     if(width > 0.005)
-        //         robotContext::gripper.move(gripperWidth, 0.2);
-        //     else {
-        //         if(!robotContext::gripper.grasp(0.04, 0.1, 60)) {
-        //             std::cout << "FAILED GRASP!" << std::endl;
-        //         }
-        //     }
-        // }
+        double width = commsContext::subscriber.readGripperCommands();
+        franka::GripperState gripper_state = robotContext::gripper.readOnce();
+        if(width >= maxWidth)
+            width = maxWidth;
+        if(std::abs(width - gripperWidth) >= 0.001) {
+            gripperWidth = width;
+            if(width > 0.005) {
+                gripperStateMutex->lock();
+                std::cout << "in the if statement " <<  gripperWidth << std::endl;
+                publishedWidth = gripperWidth;
+                gripperStateMutex->unlock();
+                robotContext::gripper.move(gripperWidth, 0.2);
+            }
+            else {
+                gripperStateMutex->lock();
+                std::cout << "in the else statement " << std::endl;
+                publishedWidth = 0.059;
+                gripperStateMutex->unlock();
+                if(!robotContext::gripper.grasp(0.06, 0.1, 60)) {
+                    std::cout << "FAILED GRASP!" << std::endl;
+                }
+            }
+        }
 
     } 
 }

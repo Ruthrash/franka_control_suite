@@ -1,16 +1,4 @@
-// Copyright (c) 2017 Franka Emika GmbH
-// Use of this source code is governed by the Apache-2.0 license, see LICENSE
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <iostream>
-
-#include <franka/exception.h>
-#include <franka/robot.h>
-
-#include "controllers/motion_controller.h"
-
-
+#include "common.h"
 MotionGenerator::MotionGenerator(double speed_factor, const std::array<double, 7> q_goal)
     : q_goal_(q_goal.data()) {
   dq_max_ *= speed_factor;

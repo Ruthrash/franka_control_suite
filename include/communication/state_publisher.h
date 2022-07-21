@@ -4,10 +4,10 @@
 #include <vector>
 
 
-class Publisher {
+class StatePublisher {
 public:
-    Publisher(std::string port);
-    Publisher(const Publisher& publisher);
+    StatePublisher(std::string port);
+    StatePublisher(const StatePublisher& publisher);
     void writeMessage(const std::vector<double>& data);
 
     zmq::context_t ctx;

@@ -1,95 +1,66 @@
-#include <franka/exception.h>
 #include <iostream>
+
+#include "context.h"
+#include "controllers/ik.h"
+#include <franka/exception.h>
+#include "common.h"
 #include <thread>
 
-#include "controllers/osc.h"
-#include "controllers/torque_controller.h"
-#include "controllers/motion_controller.h"
-#include "controllers/velocity_controller.h"
-#include "context/context.h"
+namespace robotContext {
+    franka::Robot *robot;
+    franka::Gripper *gripper;
+    franka::Model *model;
 
+}
+namespace Comms {
+    ActionSubscriber *actionSubscriber; 
+    StatePublisher *statePublisher; 
+}
 
-int main(int argc, char** argv) {
+int main(int argc, char* argv[]) {
+
+    std::string robot_ip, realtime_pc_ip, workstation_ip; 
+
+    if(argc != 4){
+        std::cout<<"The usage is ./frank_control robot_ip realtime_pc_ip workstation_ip \n";
+        exit(1);
+    }
+    else{
+        robot_ip = argv[1]; 
+        realtime_pc_ip = argv[2]; 
+        workstation_ip = argv[3];
+    }
     try {
-        std::string controlMode = "posCtrl";
-        // bool useOSC = false;
+        ActionSubscriber as_(CommsDataType::POSE, std::string("tcp://") + realtime_pc_ip + std::string(":2069"));
+        StatePublisher sp_(std::string("tcp://") + workstation_ip + std::string(":2096"));
+        Comms::actionSubscriber = &as_; 
+        Comms::statePublisher = &sp_; 
+        franka::Robot robot_(robot_ip);
+        franka::Gripper gripper_(robot_ip);
 
+        robotContext::robot = &robot_; 
+        robotContext::gripper = &gripper_; 
+        franka::Model model_ = robotContext::robot->loadModel();
+        robotContext::model = &model_;         
         std::cout << "moving robot to default position..." << std::endl;
         std::array<double, 7> qRest = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
         MotionGenerator motionGenerator(0.5, qRest);
-        robotContext::robot.control(motionGenerator);
-
-        franka::GripperState gripperState = robotContext::gripper.readOnce();
-        double maxWidth = gripperState.max_width;
-        robotContext::gripper.move(maxWidth, 0.2);
-
-        std::cout << "finished moving robot to default position" << std::endl;
-
-        // robotContext::robot.setCollisionBehavior(
-        //     {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{120.0, 120.0, 118.0, 118.0, 116.0, 114.0, 112.0}},
-        //     {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{120.0, 120.0, 118.0, 118.0, 116.0, 114.0, 112.0}},
-        //     {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{120.0, 120.0, 120.0, 125.0, 125.0, 125.0}},
-        //     {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{120.0, 120.0, 120.0, 125.0, 125.0, 125.0}}
-        // );
-
-        if(controlMode == "osc") {
-            commsContext::subscriber.setDataType(CommsDataType::DELTA_POSE_NULL_POSE);
-            Osc osc(1, true, false, false);
-            // initialize subscriber thread
-            std::thread subscribeThread([]() {
-                while(true) {
-                    commsContext::subscriber.readMessage();
-                }
-            });
-            // run control loop
+        robotContext::robot->control(motionGenerator);
+        std::cout << "finished moving robot to default position" << std::endl;    
+        
+        InverseKinematics IK_(1, IKType::M_P_PSEUDO_INVERSE);
+        std::thread subscribeThread([]() {
             while(true) {
-                robotContext::robot.control(osc);
+                Comms::actionSubscriber->readMessage();
             }
+        });        
+        while(true) {
+            robotContext::robot->control(IK_);
         }
-        else if(controlMode == "posCtrl") {
-            // commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL);
-            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES_VEL_GRIPPER);
-            std::cout << "before initialization" << std::endl;
-            TorqueGenerator torqueController(1, true);
-            std::cout << "before assignment" << std::endl;
-            commsContext::subscriber.values[0] = 0;
-            commsContext::subscriber.values[1] = -M_PI_4;
-            commsContext::subscriber.values[2] = 0;
-            commsContext::subscriber.values[3] = -3 * M_PI_4;
-            commsContext::subscriber.values[4] = 0;
-            commsContext::subscriber.values[5] = M_PI_2;
-            commsContext::subscriber.values[6] = M_PI_4;
-            std::cout << "after sub assignment" << std::endl;
-            // initialize subscriber thread
-            std::thread subscribeThread([]() {
-                while(true) {
-                    commsContext::subscriber.readMessage();
-                }
-            });
-            // run control loop
-            while(true) {
-                robotContext::robot.control(torqueController);
-            }
-        }
-        else if(controlMode == "velCtrl") {
-            commsContext::subscriber.setDataType(CommsDataType::JOINT_ANGLES);
-            VelocityGenerator velocityController(1, false);
-            // initialize subscriber thread
-            std::thread subscribeThread([]() {
-                while(true) {
-                    commsContext::subscriber.readMessage();
-                }
-            });
-            // run control loop
-            while(true) {
-                robotContext::robot.control(velocityController);
-            }
-        }
-
-
+    
     } catch (const franka::Exception& e) {
         std::cout << e.what() << std::endl;
         return -1;
     }
-
 }
+

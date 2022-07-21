@@ -24,22 +24,22 @@ inline std::map<CommsDataType, int> typeLengths = {
     {CommsDataType::JOINT_ANGLES_VEL, 7 + 7},
     {CommsDataType::DELTA_POSE, 6},
     {CommsDataType::DELTA_POSE_NULL_POSE, 6 + 7},
-    {CommsDataType::POSE, 6},
+    {CommsDataType::POSE, 7},//quaternion
     {CommsDataType::JOINT_ANGLES_GRIPPER, 7 + 2},
     {CommsDataType::JOINT_ANGLES_VEL_GRIPPER, 7 + 7 + 2},
     {CommsDataType::DELTA_POSE_GRIPPER, 6 + 2},
     {CommsDataType::POSE_GRIPPER, 6 + 2},
 };
 
-class Subscriber {
+class ActionSubscriber {
 private:
     std::mutex accessValuesMutex;
 
 public:
     CommsDataType type;
-
-    Subscriber(CommsDataType dataType, std::string portId);
-    Subscriber(const Subscriber& Subscriber);
+    int action_space_dim_;
+    ActionSubscriber(CommsDataType dataType, std::string portId);
+    ActionSubscriber(const ActionSubscriber& ActionSubscriber);
     void readMessage();
     void readValues(std::vector<double>& output);
     double readGripperCommands();

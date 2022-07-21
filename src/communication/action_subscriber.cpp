@@ -1,15 +1,16 @@
 #include <math.h>
 
-#include "communication/subscriber.h"
+#include "communication/action_subscriber.h"
 #include <iostream>
 
 
-Subscriber::Subscriber(CommsDataType dataType, std::string portId) : type(dataType), socket(ctx, zmq::socket_type::sub) {
+ActionSubscriber::ActionSubscriber(CommsDataType dataType, std::string portId) : type(dataType), socket(ctx, zmq::socket_type::sub) {
     int confl = 1;
     socket.setsockopt(ZMQ_CONFLATE, &confl, sizeof(int));
     socket.connect(portId);
     socket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
     port = portId;
+    action_space_dim_ = typeLengths[type];
     // values.push_back(0);
     // values.push_back(-M_PI_4);
     // values.push_back(0);
@@ -21,7 +22,7 @@ Subscriber::Subscriber(CommsDataType dataType, std::string portId) : type(dataTy
         values.push_back(0.0);
 }
 
-Subscriber::Subscriber(const Subscriber& subscriber) : type(subscriber.type), socket(ctx, zmq::socket_type::sub){
+ActionSubscriber::ActionSubscriber(const ActionSubscriber& subscriber) : type(subscriber.type), socket(ctx, zmq::socket_type::sub){
     int confl = 1;
     socket.setsockopt(ZMQ_CONFLATE, &confl, sizeof(int));
     socket.connect(subscriber.port);
@@ -31,19 +32,19 @@ Subscriber::Subscriber(const Subscriber& subscriber) : type(subscriber.type), so
         values.push_back(0.0);
 }
 
-void Subscriber::readMessage() {
+void ActionSubscriber::readMessage() {
     zmq::message_t message;
     socket.recv(&message);
  
     int numValues = message.size() / sizeof(double);
-    assert(numValues == typeLengths[type]);
+    assert(numValues == action_space_dim_);
     
     std::lock_guard<std::mutex> guard(accessValuesMutex);
     for(int i = 0; i < numValues; i++)
         values[i] = *(reinterpret_cast<double*>(message.data()) + i);
 }
 
-void Subscriber::readValues(std::vector<double>& output) {
+void ActionSubscriber::readValues(std::vector<double>& output) {
     std::lock_guard<std::mutex> guard(accessValuesMutex);
     if(output.size() != values.size()) 
         output.resize(values.size());
@@ -57,14 +58,14 @@ void Subscriber::readValues(std::vector<double>& output) {
 
 }
 
-void Subscriber::setDataType(CommsDataType dataType) {
+void ActionSubscriber::setDataType(CommsDataType dataType) {
     type = dataType;
     values.resize(typeLengths[dataType]);
     for(size_t i = 0; i < typeLengths[type]; i++)
         values[i] = 0.0;
 }
 
-double Subscriber::readGripperCommands() {
+double ActionSubscriber::readGripperCommands() {
     std::lock_guard<std::mutex> guard(accessValuesMutex);
     double finger1 = values.end()[-2];
     double finger2 = values.end()[-1];

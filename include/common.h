@@ -1,16 +1,9 @@
-// Copyright (c) 2017 Franka Emika GmbH
-// Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #pragma once
 
-#include <array>
-
-#include <Eigen/Core>
-
-#include <franka/control_types.h>
-#include <franka/duration.h>
 #include <franka/robot.h>
+#include <franka/model.h>
 #include <franka/robot_state.h>
-
+#include <eigen3/Eigen/Core>
 
 /**
  * An example showing how to generate a joint pose motion to a goal position. Adapted from:

@@ -1,3 +1,4 @@
+#pragma once
 #include "base_controller.h"
 	
 #include <eigen3/Eigen/Dense>

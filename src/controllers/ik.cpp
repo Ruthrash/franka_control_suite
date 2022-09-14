@@ -12,7 +12,6 @@
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
 
-#include "utils/utils.h"
 /*
 Constructor must have atleast one parameter. Because when robot.cotrol()is run, 
 it tries to pass the () operator with this class names, which will conflict with the base constructor
@@ -38,14 +37,12 @@ franka::JointVelocities InverseKinematics::operator() (const franka::RobotState&
     // }
     std::vector<double> goal_pose; 
     Comms::actionSubscriber->readValues(goal_pose);
-    Eigen::VectorXd goal_pose_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(goal_pose.data(), goal_pose.size());
-    ee_goal_pose = goal_pose_eigen;
+    ee_goal_pose = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(goal_pose.data(), goal_pose.size());
     if((count-1)%4==0){
       std::vector<double> joints = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],robot_state.q[4], robot_state.q[5], robot_state.q[6]};
       Comms::statePublisher->writeMessage(joints);
     }
     count++;
-    std::array<double, DOF> tau_d_calculated;
     Eigen::Affine3d ee_transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
     Eigen::Vector3d ee_translation_now(ee_transform.translation()), 
                     target_ee_translation;      
@@ -106,8 +103,6 @@ Eigen::Matrix<double, 7, 1> InverseKinematics::_get_delta_joint_angles(const Eig
                                                     const Eigen::Vector3d &ee_ori_error){
     Eigen::Matrix<double, 6, 1> delta_ee_pose;
     delta_ee_pose << ee_position_error, ee_ori_error; 
-    
-
     if(type_ == IKType::DAMPED_LS){
       Eigen::Matrix<double, 7, 6> jacobian_T = jacobian.transpose();
       double lambda_val = 0.1;

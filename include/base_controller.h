@@ -5,7 +5,7 @@
 #include <franka/robot_state.h>
 #include "context.h"
 #include <eigen3/Eigen/Core>
-
+#include "utils/utils.h"
 
 #define DOF  7
 

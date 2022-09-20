@@ -85,7 +85,7 @@ franka::Torques OSC::operator() (const franka::RobotState& robot_state, franka::
                                                           joint_velocity,
                                                           desired_ee_force,
                                                           desired_ee_torque);
-
+  
     return output_joint_torque;
 }
 

@@ -21,13 +21,14 @@ private:
     IKType type_; 
     //std::array<double, 6> pose_command = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}; 
     Eigen::VectorXd ee_goal_pose; 
-    Eigen::Matrix<double, 7, 1> _get_delta_joint_angles(const Eigen::Matrix<double, 6, 7> &jacobian,
+    Eigen::Matrix<double, DOF, 1> _get_delta_joint_angles(const Eigen::Matrix<double, 6, DOF> &jacobian,
                                                     const Eigen::Vector3d &ee_position_error,
                                                     const Eigen::Vector3d &ee_ori_error);  
-    std::array<double,7>  _compute_target_joint_angle_pos(const Eigen::Matrix<double, 7, 1> &q_now, 
-                                                        const Eigen::Matrix<double, 6, 7> &jacobian,
+    std::array<double,DOF>  _compute_target_joint_angle_pos(const Eigen::Matrix<double, DOF, 1> &q_now, 
+                                                        const Eigen::Matrix<double, 6, DOF> &jacobian,
                                                         const Eigen::Vector3d &ee_position_error,
                                                         const Eigen::AngleAxisd &ee_ori_error_aa);
+                                                        
 };
 
 /*

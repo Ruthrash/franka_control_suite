@@ -13,7 +13,6 @@ public:
     franka::Torques operator()(const franka::RobotState&, franka::Duration); 
 
 private: 
-    Eigen::VectorXd joint_goal_position;
+    Eigen::VectorXd joint_goal_pos_eigen;
     void clamp_joint_angles(std::vector<double> &joint_pos_goal);
-    void clamp_torque(std::array<double, 7> &torque_array);
 };

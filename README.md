@@ -18,5 +18,10 @@ To do:
 - [ ] add interpolators to all implementations
 
 Notes: 
-- IK controller has been tested in the real world 
+- IK controller has been tested in the real world. 3 methods have been implemented
+    - Moore-Penrose Inverse
+    - Damped Least Square 
+    - Jacobian transpose
+- Joint torque controller listed to desired joint torque commands, clips it to real robot limits and limits the rate before applying.
 - other controllers are being tested currently
+- fixed impedance OSC has been implemented completely, variable impedance and K_p are partially implemented.

@@ -28,7 +28,6 @@ private:
                                                         const Eigen::Matrix<double, 6, 7> &jacobian,
                                                         const Eigen::Vector3d &ee_position_error,
                                                         const Eigen::AngleAxisd &ee_ori_error_aa);
-                                                        
 };
 
 /*

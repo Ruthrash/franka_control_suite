@@ -24,7 +24,6 @@ franka::Torques OSC::operator() (const franka::RobotState& robot_state, franka::
       first_step = false; 
       initial_joint_config = Eigen::Map<const Eigen::Matrix<double, 7, 1>>((robot_state.q).data());
     }
-
     if((count-1)%4==0){
       std::vector<double> joints = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],robot_state.q[4], robot_state.q[5], robot_state.q[6]};
       Comms::statePublisher->writeMessage(joints);
@@ -66,9 +65,6 @@ franka::Torques OSC::operator() (const franka::RobotState& robot_state, franka::
     Eigen::Map<const Eigen::Matrix<double, 6, 7>> jacobian(jacobianArray.data());
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> joint_pos(robot_state.q.data());
     Eigen::Map<Eigen::Matrix<double, 7, 7>> mass(massArray.data());
-    
-    
-    
     
     // ee velocity
     Eigen::Matrix<double, 6, 1> ee_velocity = jacobian * joint_velocity;

@@ -141,3 +141,4 @@ franka::Torques OSC::_compute_output_torque(const Eigen::Matrix<double, 6, 7> &j
 
     
 
+//clip k_s commands 

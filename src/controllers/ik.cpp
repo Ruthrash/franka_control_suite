@@ -15,7 +15,10 @@
 Constructor must have atleast one parameter. Because when robot.cotrol()is run, 
 it tries to pass the () operator with this class names, which will conflict with the base constructor
 */
-InverseKinematics::InverseKinematics(int start, IKType type=IKType::M_P_PSEUDO_INVERSE){count =start; type_ = type; ee_goal_pose.resize(DOF);    
+InverseKinematics::InverseKinematics(int start, IKType type=IKType::M_P_PSEUDO_INVERSE){
+  count =start;
+  type_ = type;
+  ee_goal_pose.resize(DOF);    
 }
 
 InverseKinematics::~InverseKinematics(){}
@@ -34,13 +37,15 @@ franka::JointVelocities InverseKinematics::operator() (const franka::RobotState&
     //                     Comms::actionSubscriber->ee_goal_pose[5],
     //                     Comms::actionSubscriber->ee_goal_pose[6];
     // }
+    if((count-1)%4==0){
+      std::vector<double> joints = {robot_state.O_T_EE[0], robot_state.O_T_EE[1], robot_state.O_T_EE[2], robot_state.O_T_EE[3],robot_state.O_T_EE[4], robot_state.O_T_EE[5], robot_state.O_T_EE[6],
+                                  robot_state.O_T_EE[7], robot_state.O_T_EE[8], robot_state.O_T_EE[9], robot_state.O_T_EE[10], robot_state.O_T_EE[11], robot_state.O_T_EE[12], robot_state.O_T_EE[13],
+                                  robot_state.O_T_EE[14], robot_state.O_T_EE[15]};
+      Comms::statePublisher->writeMessage(joints);
+    }    
     std::vector<double> goal_pose; 
     Comms::actionSubscriber->readValues(goal_pose);
     ee_goal_pose = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(goal_pose.data(), goal_pose.size());
-    if((count-1)%4==0){
-      std::vector<double> joints = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],robot_state.q[4], robot_state.q[5], robot_state.q[6]};
-      Comms::statePublisher->writeMessage(joints);
-    }
     count++;
     Eigen::Affine3d ee_transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
     Eigen::Vector3d ee_translation_now(ee_transform.translation()), 
@@ -56,7 +61,7 @@ franka::JointVelocities InverseKinematics::operator() (const franka::RobotState&
         ee_ori_goal_vec.normalize();
         target_ee_ori_quat = utils::quat_multiplication(ee_ori_goal_vec, 
                                                         ee_ori_now_quat);
-        }
+    }
     else{
         target_ee_translation = Eigen::Vector3d(ee_goal_pose.head(3));
         Eigen::Vector4d ee_ori_goal_vec = ee_goal_pose.tail(4);

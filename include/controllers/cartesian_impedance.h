@@ -5,14 +5,15 @@
 #include <franka/rate_limiting.h>
 
 
-class JointPosition: public ControllersBase{
+class CartesianImpedance: public ControllersBase{
 
 public:
-    JointPosition(int start, bool zmq_comms_flag=false); 
-    ~JointPosition();
+    CartesianImpedance(int start, bool zmq_comms_flag=false); 
+    ~CartesianImpedance();
     franka::Torques operator()(const franka::RobotState&, franka::Duration); 
 
 private: 
-    Eigen::VectorXd joint_goal_pos_eigen;
+    Eigen::Affine3d cartesian_goal_transform_eigen;
     void clamp_joint_angles(std::vector<double> &joint_pos_goal);
+    Eigen::Matrix<double, 6, 6> stiffness, damping;
 };

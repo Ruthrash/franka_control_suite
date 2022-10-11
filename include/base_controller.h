@@ -24,10 +24,11 @@ protected:
     //virtual franka::Torques control_callback(const franka::RobotState&, franka::Duration) = 0; 
     // stiffness gain
     // const std::array<double, DOF> k_s = {{600.0, 600.0, 600.0, 600.0, 250.0, 150.0, 50.0}};
-    const std::array<double, DOF> k_s = {{700.0, 700.0, 700.0, 700.0, 291.67, 175.0, 58.33}};
-    
+    //const std::array<double, DOF> k_s = {{700.0, 700.0, 700.0, 700.0, 291.67, 175.0, 58.33}};
+    const std::array<double, DOF> k_s = {{200.0, 200.0, 200.0, 200.0, 200.0, 200.0,200.0}};
+    const std::array<double, DOF> k_d = {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}};
     // damping gain
-    const std::array<double, DOF> k_d = {{100.0, 100.0, 100.0, 100.0, 60.0, 50.0, 30.0}};
+    //const std::array<double, DOF> k_d = {{100.0, 100.0, 100.0, 100.0, 60.0, 50.0, 30.0}};
     // const std::array<double, DOF> k_d = {{100.0, 100.0, 100.0, 100.0, 30.0, 25.0, 15.0}};
     // integral gain
     const std::array<double, DOF> k_i = {{100.0, 100.0, 100.0, 200.0, 120.0, 100.0, 30.0}};
@@ -50,6 +51,8 @@ protected:
 
     // by default control commands are relative and not absolute
     ControlMode control_mode_= ControlMode::ABSOLUTE; 
+
+    bool zmq_comms = false;
 };
 
 inline ControllersBase::~ControllersBase(){}

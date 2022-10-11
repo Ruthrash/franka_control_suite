@@ -10,77 +10,27 @@
 #include <Poco/Path.h>
 #include <franka/exception.h>
 #include <franka/robot.h>
+#include <franka/rate_limiting.h>
 
-namespace {
-class Controller {
- public:
-  Controller(size_t dq_filter_size,
-             const std::array<double, 7>& K_P,  // NOLINT(readability-identifier-naming)
-             const std::array<double, 7>& K_D)  // NOLINT(readability-identifier-naming)
-      : dq_current_filter_position_(0), dq_filter_size_(dq_filter_size), K_P_(K_P), K_D_(K_D) {
-    std::fill(dq_d_.begin(), dq_d_.end(), 0);
-    dq_buffer_ = std::make_unique<double[]>(dq_filter_size_ * 7);
-    std::fill(&dq_buffer_.get()[0], &dq_buffer_.get()[dq_filter_size_ * 7], 0);
-  }
-  inline franka::Torques step(const franka::RobotState& state) {
-    updateDQFilter(state);
-    std::array<double, 7> tau_J_d;  // NOLINT(readability-identifier-naming)
-    for (size_t i = 0; i < 7; i++) {
-      tau_J_d[i] = K_P_[i] * (state.q_d[i] - state.q[i]) + K_D_[i] * (dq_d_[i] - getDQFiltered(i));
-    }
-    return tau_J_d;
-  }
-  void updateDQFilter(const franka::RobotState& state) {
-    for (size_t i = 0; i < 7; i++) {
-      dq_buffer_.get()[dq_current_filter_position_ * 7 + i] = state.dq[i];
-    }
-    dq_current_filter_position_ = (dq_current_filter_position_ + 1) % dq_filter_size_;
-  }
-  double getDQFiltered(size_t index) const {
-    double value = 0;
-    for (size_t i = index; i < 7 * dq_filter_size_; i += 7) {
-      value += dq_buffer_.get()[i];
-    }
-    return value / dq_filter_size_;
-  }
- private:
-  size_t dq_current_filter_position_;
-  size_t dq_filter_size_;
-  const std::array<double, 7> K_P_;  // NOLINT(readability-identifier-naming)
-  const std::array<double, 7> K_D_;  // NOLINT(readability-identifier-naming)
-  std::array<double, 7> dq_d_;
-  std::unique_ptr<double[]> dq_buffer_;
-};
-std::vector<double> generateTrajectory(double a_max) {
-  // Generating a motion with smooth velocity and acceleration.
-  // Squared sine is used for the acceleration/deceleration phase.
-  std::vector<double> trajectory;
-  constexpr double kTimeStep = 0.001;          // [s]
-  constexpr double kAccelerationTime = 1;      // time spend accelerating and decelerating [s]
-  constexpr double kConstantVelocityTime = 1;  // time spend with constant speed [s]
-  // obtained during the speed up
-  // and slow down [rad/s^2]
-  double a = 0;  // [rad/s^2]
-  double v = 0;  // [rad/s]
-  double t = 0;  // [s]
-  while (t < (2 * kAccelerationTime + kConstantVelocityTime)) {
-    if (t <= kAccelerationTime) {
-      a = pow(sin(t * M_PI / kAccelerationTime), 2) * a_max;
-    } else if (t <= (kAccelerationTime + kConstantVelocityTime)) {
-      a = 0;
-    } else {
-      const double deceleration_time =
-          (kAccelerationTime + kConstantVelocityTime) - t;  // time spent in the deceleration phase
-      a = -pow(sin(deceleration_time * M_PI / kAccelerationTime), 2) * a_max;
-    }
-    v += a * kTimeStep;
-    t += kTimeStep;
-    trajectory.push_back(v);
-  }
-  return trajectory;
+#include <thread>
+#include "common.h"
+#include <atomic>
+#include "tests/test_common.h"
+
+#include "controllers/joint_vel.h"
+#include "context.h"
+
+namespace robotContext {
+    franka::Robot *robot;
+    franka::Gripper *gripper;
+    franka::Model *model;
+
 }
-}  // anonymous namespace
-void writeLogToFile(const std::vector<franka::Record>& log);
+namespace Comms {
+    ActionSubscriber *actionSubscriber; 
+    StatePublisher *statePublisher; 
+}
+
 int main(int argc, char** argv) {
   if (argc != 2) {
     std::cerr << "Usage: " << argv[0] << " <robot-hostname>" << std::endl;
@@ -89,23 +39,32 @@ int main(int argc, char** argv) {
   // Parameters
   const size_t joint_number{3};
   const size_t filter_size{5};
+  const double print_rate = 10.0;
+  std::atomic_bool running{true};
+
   // NOLINTNEXTLINE(readability-identifier-naming)
   const std::array<double, 7> K_P{{200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0}};
   // NOLINTNEXTLINE(readability-identifier-naming)
-  const std::array<double, 7> K_D{{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}};
+  const std::array<double, 7> K_D{{30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0}};
   const double max_acceleration{1.0};
-  Controller controller(filter_size, K_P, K_D);
+  //JointVelController controller(filter_size, K_P, K_D);
+  JointVelocity controller(1);
+  std::string file_name = "/home/ruthrash/log.txt";
+  bool joint_space=true;
+  std::thread print_thread = std::thread(log_data, std::cref(print_rate), std::ref(print_data), std::ref(running), std::ref(file_name), std::cref(joint_space));
+
+
   try {
     franka::Robot robot(argv[1]);
-    //setDefaultBehavior(robot);
+    setDefaultBehavior(robot);
     // First move the robot to a suitable joint configuration
     std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
-    // MotionGenerator motion_generator(0.5, q_goal);
-    // std::cout << "WARNING: This example will move the robot! "
-    //           << "Please make sure to have the user stop button at hand!" << std::endl
-    //           << "Press Enter to continue..." << std::endl;
-    // std::cin.ignore();
-    // robot.control(motion_generator);
+    MotionGenerator motion_generator(0.5, q_goal);
+    std::cout << "WARNING: This example will move the robot! "
+              << "Please make sure to have the user stop button at hand!" << std::endl
+              << "Press Enter to continue..." << std::endl;
+    std::cin.ignore();
+    robot.control(motion_generator);
     std::cout << "Finished moving to initial joint configuration." << std::endl;
     // Set additional parameters always before the control loop, NEVER in the control loop!
     // Set collision behavior.
@@ -114,55 +73,44 @@ int main(int argc, char** argv) {
         {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}},
         {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}},
         {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}});
-    size_t index = 0;
-    std::vector<double> trajectory = generateTrajectory(max_acceleration);
+    double index = 0.0;
+    double time_max = 1.0;
+    double omega_max = 1.0;
     robot.control(
-        [&](const franka::RobotState& robot_state, franka::Duration) -> franka::Torques {
-          return controller.step(robot_state);
+        [&](const franka::RobotState& robot_state, franka::Duration period) -> franka::Torques {
+          if (print_data.mutex.try_lock()) {
+            print_data.has_data = true;
+            print_data.robot_state = robot_state;
+            //print_data.tau_d_last = tau_J_d;
+            //print_data.gravity = model.gravity(state);
+            print_data.mutex.unlock();
+          }   
+          return controller(robot_state, period);
         },
-        [&](const franka::RobotState&, franka::Duration period) -> franka::JointVelocities {
-          index += period.toMSec();
-          if (index >= trajectory.size()) {
-            index = trajectory.size() - 1;
-          }
-          franka::JointVelocities velocities{{0, 0, 0, 0, 0, 0, 0}};
-          velocities.dq[joint_number] = trajectory[index];
-          if (index >= trajectory.size() - 1) {
-            return franka::MotionFinished(velocities);
-          }
-          return velocities;
+        [&](const franka::RobotState&robot_state, franka::Duration period) -> franka::JointVelocities {
+        index += period.toSec();
+        double cycle = std::floor(std::pow(-1.0, (index - std::fmod(index, time_max)) / time_max));
+        double omega = cycle * omega_max / 2.0 * (1.0 - std::cos(2.0 * M_PI / time_max * index));
+
+        franka::JointVelocities velocities = {{0.0, 0.0, 0.0, omega, omega, omega, omega}};
+
+        if (index >= 5.0) {
+            std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
+            running = false;
+            return franka::MotionFinished(velocities);   
+        }
+        return velocities;
         });
+    robot.control(motion_generator);
   } catch (const franka::ControlException& e) {
     std::cout << e.what() << std::endl;
-    writeLogToFile(e.log);
     return -1;
   } catch (const franka::Exception& e) {
     std::cout << e.what() << std::endl;
     return -1;
   }
+  if (print_thread.joinable()) {
+    print_thread.join();
+  }  
   return 0;
-}
-void writeLogToFile(const std::vector<franka::Record>& log) {
-  if (log.empty()) {
-    return;
-  }
-  try {
-    Poco::Path temp_dir_path(Poco::Path::temp());
-    temp_dir_path.pushDirectory("libfranka-logs");
-    Poco::File temp_dir(temp_dir_path);
-    temp_dir.createDirectories();
-    std::string now_string =
-        Poco::DateTimeFormatter::format(Poco::Timestamp{}, "%Y-%m-%d-%h-%m-%S-%i");
-    std::string filename = std::string{"log-" + now_string + ".csv"};
-    Poco::File log_file(Poco::Path(temp_dir_path, filename));
-    if (!log_file.createFile()) {
-      std::cout << "Failed to write log file." << std::endl;
-      return;
-    }
-    std::ofstream log_stream(log_file.path().c_str());
-    log_stream << franka::logToCSV(log);
-    std::cout << "Log file written to: " << log_file.path() << std::endl;
-  } catch (...) {
-    std::cout << "Failed to write log file." << std::endl;
-  }
-}
+}  

@@ -12,7 +12,7 @@
 #include <franka/robot.h>
 #include <franka/rate_limiting.h>
 
-JointVelocity::JointVelocity(int start){
+JointVelocity::JointVelocity(int start, bool zmq_comms_flag){
     count = start; 
     joint_goal_vel_eigen.resize(DOF);
     prev_joint_vel_error.resize(DOF);
@@ -21,45 +21,59 @@ JointVelocity::JointVelocity(int start){
     //sets to zero
     prev_joint_vel_error -= prev_joint_vel_error;
     summed_joint_vel_error -= summed_joint_vel_error; 
+    zmq_comms = zmq_comms_flag;
+    for(auto& vel_error: joint_vel_error_buffer)
+        vel_error = Eigen::MatrixXd::Zero(DOF,1);
 }
 
 
 JointVelocity::~JointVelocity(){}
 
 franka::Torques JointVelocity::operator()(const franka::RobotState& robot_state, franka::Duration period){
-    std::vector<double> joint_vel_goal; 
-    Comms::actionSubscriber->readValues(joint_vel_goal);
-    clamp_joint_velocities(joint_vel_goal);
-    joint_goal_vel_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(joint_vel_goal.data(), joint_vel_goal.size());
     
-    if((count-1)%4==0){
-      std::vector<double> joints = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],robot_state.q[4], robot_state.q[5], robot_state.q[6]};
-      Comms::statePublisher->writeMessage(joints);
+    if(zmq_comms){
+        std::vector<double> joint_vel_goal; 
+        Comms::actionSubscriber->readValues(joint_vel_goal);
+        clamp_joint_velocities(joint_vel_goal);
+        joint_goal_vel_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(joint_vel_goal.data(), joint_vel_goal.size());
+        
+        if((count-1)%4==0){
+        std::vector<double> joints = {robot_state.q[0], robot_state.q[1], robot_state.q[2], robot_state.q[3],robot_state.q[4], robot_state.q[5], robot_state.q[6]};
+        Comms::statePublisher->writeMessage(joints);
+        }
+        count++; 
     }
-    count++; 
-    Eigen::Map<const Eigen::Matrix<double, DOF, 1>> k_s_eigen(k_s.data());
-    Eigen::Map<const Eigen::Matrix<double, DOF, 1>> k_d_eigen(k_d.data()); 
+    else{
+        joint_goal_vel_eigen = Eigen::Map<const Eigen::Matrix<double, DOF, 1>>((robot_state.dq_d).data());
+    }
+    std::array<double, DOF> k_s_ = {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0,10.0}};
+    Eigen::Map<const Eigen::Matrix<double, DOF, 1>> k_s_eigen(k_s_.data());
+    //Eigen::Map<const Eigen::Matrix<double, DOF, 1>> k_d_eigen(k_d.data()); 
     // k_i and k_d values taken from robosuite
     Eigen::Matrix<double, DOF, 1> k_i_eigen = k_s_eigen * 0.005;
-    //k_d_eigen = k_s_eigen * 0.001; 
+    Eigen::Matrix<double, DOF, 1> k_d_eigen = 0.001*k_s_eigen;
+
 
     Eigen::Map<const Eigen::Matrix<double, DOF, 1>> joint_vel_now_eigen((robot_state.dq).data());
     Eigen::Matrix<double, DOF, 1> joint_vel_error = joint_goal_vel_eigen - joint_vel_now_eigen; 
-
     if(!is_saturated)
         summed_joint_vel_error += joint_vel_error; 
 
-    Eigen::Matrix<double, DOF, 1> joint_vel_error_dot = joint_vel_error - prev_joint_vel_error;
 
+    Eigen::Matrix<double, DOF, 1> joint_vel_error_dot = joint_vel_error - prev_joint_vel_error;
+    prev_joint_vel_error = joint_vel_error;
     joint_vel_error_buffer.push_back(joint_vel_error_dot);
-    assert(!joint_vel_error_buffer.empty());
+    
     joint_vel_error_buffer.erase(joint_vel_error_buffer.begin());
+
     assert(joint_vel_error_buffer.size()==100);
+    Eigen::Matrix<double, DOF, 1> average_joint_vel_error_dot; average_joint_vel_error_dot ;
 
     Eigen::Matrix<double, DOF, 1> ini = Eigen::MatrixXd::Zero(DOF,1);
-    Eigen::Matrix<double, DOF, 1> average_joint_vel_error_dot = std::accumulate(joint_vel_error_buffer.begin(),
-                                                                            joint_vel_error_buffer.end(), 
-                                                                            ini)/ joint_vel_error_buffer.size();
+    average_joint_vel_error_dot = std::accumulate(joint_vel_error_buffer.begin(),
+                                                joint_vel_error_buffer.end(), 
+                                                ini)/ joint_vel_error_buffer.size();
+    
 
     Eigen::Matrix<double, DOF, 1> desired_tau_eigen = k_s_eigen.cwiseProduct(joint_vel_error) + 
                                                     k_i_eigen.cwiseProduct(summed_joint_vel_error) + 

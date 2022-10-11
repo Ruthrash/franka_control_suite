@@ -7,7 +7,7 @@
 class JointVelocity: public ControllersBase{
 
 public:
-    JointVelocity(int start); 
+    JointVelocity(int start, bool zmq_comms_flag=false); 
     ~JointVelocity();
     franka::Torques operator()(const franka::RobotState&, franka::Duration); 
 

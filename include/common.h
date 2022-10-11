@@ -4,6 +4,32 @@
 #include <franka/model.h>
 #include <franka/robot_state.h>
 #include <eigen3/Eigen/Core>
+#include <iostream>
+#include <iterator>
+#include <thread>
+#include <atomic>
+#include <fstream>
+
+// namespace {
+// template <class T, size_t N>
+// std::ostream& operator<<(std::ostream& ostream, const std::array<T, N>& array) {
+//   ostream << "[";
+//   std::copy(array.cbegin(), array.cend() - 1, std::ostream_iterator<T>(ostream, ","));
+//   std::copy(array.cend() - 1, array.cend(), std::ostream_iterator<T>(ostream));
+//   ostream << "]";
+//   return ostream;
+// }
+// }  // anonymous namespace
+
+void inline setDefaultBehavior(franka::Robot& robot) {
+  robot.setCollisionBehavior(
+      {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
+      {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0}},
+      {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
+      {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}});
+  robot.setJointImpedance({{3000, 3000, 3000, 2500, 2500, 2000, 2000}});
+  robot.setCartesianImpedance({{3000, 3000, 3000, 300, 300, 300}});
+}
 
 /**
  * An example showing how to generate a joint pose motion to a goal position. Adapted from:

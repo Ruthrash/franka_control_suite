@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import zmq 
 import numpy as np
 import tf.transformations as tr

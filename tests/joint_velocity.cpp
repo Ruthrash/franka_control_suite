@@ -16,10 +16,10 @@
 #include "common.h"
 #include <atomic>
 #include "tests/test_common.h"
+#include "tests/motion_generators.h"
 
 #include "controllers/joint_vel.h"
 #include "context.h"
-
 namespace robotContext {
     franka::Robot *robot;
     franka::Gripper *gripper;
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   const double max_acceleration{1.0};
   //JointVelController controller(filter_size, K_P, K_D);
   JointVelocity controller(1);
-  std::string file_name = "/home/ruthrash/log.txt";
+  std::string file_name = "/home/pairlab/log.txt";
   bool joint_space=true;
   std::thread print_thread = std::thread(log_data, std::cref(print_rate), std::ref(print_data), std::ref(running), std::ref(file_name), std::cref(joint_space));
 
@@ -88,12 +88,7 @@ int main(int argc, char** argv) {
           return controller(robot_state, period);
         },
         [&](const franka::RobotState&robot_state, franka::Duration period) -> franka::JointVelocities {
-        index += period.toSec();
-        double cycle = std::floor(std::pow(-1.0, (index - std::fmod(index, time_max)) / time_max));
-        double omega = cycle * omega_max / 2.0 * (1.0 - std::cos(2.0 * M_PI / time_max * index));
-
-        franka::JointVelocities velocities = {{0.0, 0.0, 0.0, omega, omega, omega, omega}};
-
+        franka::JointVelocities velocities = test_joint_vel_motion_generator(robot_state, period, index);
         if (index >= 5.0) {
             std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
             running = false;
